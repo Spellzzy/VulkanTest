@@ -71,6 +71,7 @@ struct Vertex
 	glm::vec3 pos;
 	glm::vec3 color;
 	glm::vec2 texCoord;
+	glm::vec3 normal;
 
 	//  上传GPU内存后将如何传递给顶点着色器
 	static VkVertexInputBindingDescription getBindingDescription() {
@@ -86,8 +87,8 @@ struct Vertex
 		return bindingDesc;
 	}
 
-	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
-		std::array<VkVertexInputAttributeDescription, 3> attributeDesc{};
+	static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions() {
+		std::array<VkVertexInputAttributeDescription, 4> attributeDesc{};
 		attributeDesc[0].binding = 0;
 		attributeDesc[0].location = 0;
 		// 属性的数据类型
@@ -111,6 +112,11 @@ struct Vertex
 		attributeDesc[2].location = 2;
 		attributeDesc[2].format = VK_FORMAT_R32G32_SFLOAT;
 		attributeDesc[2].offset = offsetof(Vertex, texCoord);
+
+		attributeDesc[3].binding = 0;
+		attributeDesc[3].location = 3;
+		attributeDesc[3].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDesc[3].offset = offsetof(Vertex, normal);
 
 		return attributeDesc;
 	}
@@ -185,6 +191,10 @@ namespace std {
 //	4,5,6,6,7,4
 //};
 
+struct LightPushConstantData {
+	glm::vec3 color;
+	glm::vec3 position;
+};
 
 class HelloTrangleApplication
 {
@@ -1187,16 +1197,22 @@ private:
 		dynamicState.dynamicStateCount = 2;
 		dynamicState.pDynamicStates = dynamicStates;
 
-		// Pipeline layout 在此阶段 定义全局uniform		
+		// 推送常量
+		VkPushConstantRange pushConstantRange{};
+		pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		pushConstantRange.offset = 0;
+		pushConstantRange.size = sizeof(LightPushConstantData);
 
+		// Pipeline layout 在此阶段 定义全局uniform		
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		// !!!!!! 找了一下午 之前 设置好描述符布局后 count 忘记设置了 还是0
 		// 会在 createCommandBuffers 阶段时 vkcmdbinddescriptorSets后 commandbuffer 指针丢失 出错
 		pipelineLayoutInfo.setLayoutCount = 1;
 		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-		pipelineLayoutInfo.pushConstantRangeCount = 0;
-		pipelineLayoutInfo.pPushConstantRanges = nullptr;
+		// todo
+		pipelineLayoutInfo.pushConstantRangeCount = 1;
+		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
 		if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS )
 		{
@@ -1531,6 +1547,12 @@ private:
 			// firstInstance：用作实例渲染的偏移量，定义 的最低值gl_InstanceIndex。
 			//vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);			
 
+			LightPushConstantData lightData{};
+			lightData.color = glm::vec3(1.0, 0.0, 1.0);
+			lightData.position = glm::vec3(1.0, 1.0, 1.0);
+			// VK_SHADER_STAGE_FRAGMENT_BIT 只应用在片段着色器阶段
+			vkCmdPushConstants(commandBuffers[i], pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(LightPushConstantData), &lightData);
+
 			vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 			VkBuffer vertexBuffers[] = { vertexBuffer };
 			VkDeviceSize offsets[] = { 0 };
@@ -1543,6 +1565,9 @@ private:
 			// 后三个参数 指定第一个描述符集的索引 要绑定的集数 和 要绑定的集数组
 			vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1,
 				&descriptorSets[i], 0, nullptr);
+
+			
+
 			// 使用索引绘制
 			vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
@@ -2354,7 +2379,7 @@ private:
 		UniformBufferObject ubo{};
 		// 模型变换
 		// glm::rotate 参数 享有的变换 旋转角度 旋转轴
-		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		// 视角变换
 		// glm::lookat 参数 眼睛位置 中心位置 向上的轴向
 		ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -2368,6 +2393,7 @@ private:
 		vkMapMemory(device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));
 		vkUnmapMemory(device, uniformBuffersMemory[currentImage]);
+		
 	}	
 
 	void loadModel() {
@@ -2390,6 +2416,7 @@ private:
 					attrib.vertices[3 * index.vertex_index + 0],
 					attrib.vertices[3 * index.vertex_index + 1],
 					attrib.vertices[3 * index.vertex_index + 2]
+
 				};
 				vertex.texCoord = {
 					attrib.texcoords[2 * index.texcoord_index + 0],
@@ -2398,6 +2425,12 @@ private:
 
 				vertex.color = { 1.0f,1.0f,1.0f };
 
+				vertex.normal = {
+					attrib.normals[3 * index.normal_index + 0],
+					attrib.normals[3 * index.normal_index + 1],
+					attrib.normals[3 * index.normal_index + 2]
+				};
+				//std::cout << "normal --> " << vertex.normal.r;
 				//vertices.push_back(vertex);
 				//indices.push_back(indices.size());
 				if (uniqueVertices.count(vertex) == 0)
