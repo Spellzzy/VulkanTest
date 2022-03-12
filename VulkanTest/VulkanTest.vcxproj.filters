@@ -13,10 +13,66 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="源文件\imgui">
+      <UniqueIdentifier>{f8dc7b66-051b-410f-89be-b050eaf263e4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="VulkanTest.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\Downloads\imgui-master\imgui-master\imgui.cpp">
+      <Filter>源文件\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\Downloads\imgui-master\imgui-master\imgui_demo.cpp">
+      <Filter>源文件\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\Downloads\imgui-master\imgui-master\imgui_draw.cpp">
+      <Filter>源文件\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\Downloads\imgui-master\imgui-master\imgui_tables.cpp">
+      <Filter>源文件\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\Downloads\imgui-master\imgui-master\imgui_widgets.cpp">
+      <Filter>源文件\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui\imgui_impl_glfw.cpp">
+      <Filter>源文件\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui\imgui_impl_vulkan.cpp">
+      <Filter>源文件\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="UIFrame.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\Downloads\imgui-master\imgui-master\imconfig.h">
+      <Filter>源文件\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\Downloads\imgui-master\imgui-master\imgui.h">
+      <Filter>源文件\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\Downloads\imgui-master\imgui-master\imgui_internal.h">
+      <Filter>源文件\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\Downloads\imgui-master\imgui-master\imstb_rectpack.h">
+      <Filter>源文件\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\Downloads\imgui-master\imgui-master\imstb_textedit.h">
+      <Filter>源文件\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\Downloads\imgui-master\imgui-master\imstb_truetype.h">
+      <Filter>源文件\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\imgui_impl_glfw.h">
+      <Filter>源文件\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui\imgui_impl_vulkan.h">
+      <Filter>源文件\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="UIFrame.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

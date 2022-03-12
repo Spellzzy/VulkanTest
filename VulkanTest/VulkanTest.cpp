@@ -36,10 +36,13 @@
 #include <glm/glm.hpp>
 #include <array>
 
+#include "UIFrame.h"
+
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
 const std::string MODEL_PATH = "models/viking_room.obj";
+//const std::string MODEL_PATH = "models/moshi.obj";
 const std::string TEXTURE_PATH = "textures/viking_room.png";
 
 // 常量定义 同时处理多少帧
@@ -203,6 +206,8 @@ public:
 
 		initWindow();
 
+		initImGUI(window);
+
 		initVulkan();
 
 		mainLoop();
@@ -297,6 +302,8 @@ private:
 	VkDeviceMemory colorImageMemory;
 	VkImageView colorImageView;
 
+	LightPushConstantData lightData{};
+
 	void initWindow() {
 		glfwInit();
 
@@ -348,7 +355,6 @@ private:
 		createTextureSampler();
 
 		loadModel();
-
 
 		// 创建顶点缓冲区
 		createVertexBuffer();
@@ -861,9 +867,14 @@ private:
 
 		// 退出前 先等待逻辑设备完成操作
 		vkDeviceWaitIdle(device);
+
+		//ImGUIShutdown();
 	}
 
+
 	void drawFrame() {
+		//ImGUIBeginFrame();
+
 		// 等待新号完成
 		vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 		
@@ -947,6 +958,8 @@ private:
 		vkQueuePresentKHR(presentQueue, &presentInfo);
 
 		currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+		
+		//ImGUIEndFrame();
 	}
 
 	bool checkValidationLayerSupport() {
@@ -1013,7 +1026,6 @@ private:
 		
 		vertShaderStageInfo.module = vertShaderModule;
 		vertShaderStageInfo.pName = "main";
-
 		VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
 		fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -1098,7 +1110,7 @@ private:
 		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
 		// 指定要被视为正面的顶点顺序 顺时针或逆时针
 		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-
+		
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f;
 		rasterizer.depthBiasClamp = 0.0f;
@@ -1547,9 +1559,8 @@ private:
 			// firstInstance：用作实例渲染的偏移量，定义 的最低值gl_InstanceIndex。
 			//vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);			
 
-			LightPushConstantData lightData{};
-			lightData.color = glm::vec3(1.0, 0.0, 1.0);
-			lightData.position = glm::vec3(1.0, 1.0, 1.0);
+			lightData.color = glm::vec3(1.0, 1.0, 0.0);
+			lightData.position = glm::vec3(2.0, 2.0, 2.0);
 			// VK_SHADER_STAGE_FRAGMENT_BIT 只应用在片段着色器阶段
 			vkCmdPushConstants(commandBuffers[i], pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(LightPushConstantData), &lightData);
 
@@ -1852,7 +1863,7 @@ private:
 		
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = poolSizes.size();
+		poolInfo.poolSizeCount = (uint32_t)poolSizes.size();
 		poolInfo.pPoolSizes = poolSizes.data();
 		poolInfo.maxSets = static_cast<uint32_t>(swapChainImages.size());
 
@@ -2377,9 +2388,11 @@ private:
 		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 	
 		UniformBufferObject ubo{};
+
 		// 模型变换
 		// glm::rotate 参数 享有的变换 旋转角度 旋转轴
-		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.model = glm::rotate((glm::mat4(1.0f) * sin(time) * glm::mat4(0.5) + glm::mat4(0.5)), time * glm::radians(10.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		
 		// 视角变换
 		// glm::lookat 参数 眼睛位置 中心位置 向上的轴向
 		ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -2469,7 +2482,7 @@ private:
 
 		int32_t mipWidth = texWidth;
 		int32_t mipHeight = texHeight;
-		for (size_t i = 1; i < mipLevels; i++)
+		for (uint32_t i = 1; i < mipLevels; i++)
 		{
 			barrier.subresourceRange.baseMipLevel = i - 1;
 			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
