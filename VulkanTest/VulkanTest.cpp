@@ -206,7 +206,7 @@ public:
 
 		initWindow();
 
-		initImGUI(window);
+		//initImGUI(instance, window, device, graphicsQueue, physicalDevice, descriptorPool, surface, VK_NULL_HANDLE);
 
 		initVulkan();
 
@@ -1371,7 +1371,7 @@ private:
 		dependency.srcAccessMask = 0;
 		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
+		//  TODO 加上imgui的 attachment
 		std::array<VkAttachmentDescription, 3> attachments = { colorAttachment, depthAttachment, colorAttachmentResolve };
 
 		VkRenderPassCreateInfo renderPassInfo{};
