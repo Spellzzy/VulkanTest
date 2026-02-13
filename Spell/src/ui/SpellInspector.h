@@ -8,7 +8,7 @@ namespace Spell {
 class SpellInspector {
 public:
 	// Returns true if resources need to be reloaded
-	bool draw(SpellResourceManager& resources, LightPushConstantData& light, bool& convertYUp);
+	bool draw(SpellResourceManager& resources, LightPushConstantData& light, bool& convertYUp, const RenderStats& stats);
 
 private:
 	int selectedModelIdx_{ 0 };

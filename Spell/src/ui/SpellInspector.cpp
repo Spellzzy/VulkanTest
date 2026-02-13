@@ -5,12 +5,20 @@
 
 namespace Spell {
 
-bool SpellInspector::draw(SpellResourceManager& resources, LightPushConstantData& light, bool& convertYUp) {
+bool SpellInspector::draw(SpellResourceManager& resources, LightPushConstantData& light, bool& convertYUp, const RenderStats& stats) {
 	bool needReload = false;
 
 	ImGui::Begin("Inspector");
 
-	ImGui::Text("FPS: %.1f (%.3f ms/frame)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+	if (ImGui::CollapsingHeader("Render Stats", ImGuiTreeNodeFlags_DefaultOpen)) {
+		ImGui::Text("FPS: %.1f (%.3f ms/frame)", stats.fps, stats.frameTimeMs);
+		ImGui::Text("Draw Calls:  %u", stats.drawCalls);
+		ImGui::Text("Triangles:   %u", stats.triangles);
+		ImGui::Text("Vertices:    %u", stats.vertices);
+		ImGui::Text("Indices:     %u", stats.indices);
+		ImGui::Text("Textures:    %u", stats.textureCount);
+		ImGui::Text("Materials:   %u", stats.materialCount);
+	}
 	ImGui::Separator();
 
 	ImGui::Checkbox("Convert Y-up to Z-up", &convertYUp);

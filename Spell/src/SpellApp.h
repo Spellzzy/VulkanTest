@@ -61,6 +61,7 @@ private:
 	bool needReload_{ false };
 	bool convertYUp_{ false };
 	LightPushConstantData lightData_{ glm::vec3(23.47f, 21.31f, 20.79f), glm::vec3(2.0f, 2.0f, 2.0f) };
+	RenderStats renderStats_{};
 };
 
 } // namespace Spell

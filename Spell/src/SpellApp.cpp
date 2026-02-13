@@ -285,6 +285,17 @@ void SpellApp::renderFrame() {
 
 	resources_.model()->draw(commandBuffer);
 
+	// Collect render stats
+	renderStats_ = {};
+	renderStats_.drawCalls = 1;
+	renderStats_.vertices = resources_.model()->getVertexCount();
+	renderStats_.indices = resources_.model()->getIndexCount();
+	renderStats_.triangles = renderStats_.indices / 3;
+	renderStats_.textureCount = resources_.textureCount();
+	renderStats_.materialCount = static_cast<uint32_t>(resources_.model()->getMaterials().size());
+	renderStats_.fps = ImGui::GetIO().Framerate;
+	renderStats_.frameTimeMs = 1000.0f / renderStats_.fps;
+
 	imgui_->newFrame();
 	drawImGuiPanels();
 	imgui_->render(commandBuffer);
@@ -294,7 +305,7 @@ void SpellApp::renderFrame() {
 }
 
 void SpellApp::drawImGuiPanels() {
-	if (inspector_.draw(resources_, lightData_, convertYUp_)) {
+	if (inspector_.draw(resources_, lightData_, convertYUp_, renderStats_)) {
 		needReload_ = true;
 	}
 }
