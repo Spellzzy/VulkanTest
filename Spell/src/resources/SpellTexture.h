@@ -29,6 +29,11 @@ public:
 	// Caller is responsible for stbi_image_free(pixels) after this constructor returns.
 	SpellTexture(SpellDevice& device, const DecodedImageData& decoded, bool srgb, bool deferred);
 
+	// Deferred mode: uses shared staging buffer (no individual staging allocation)
+	// The shared staging buffer is managed externally by the caller.
+	SpellTexture(SpellDevice& device, const DecodedImageData& decoded, bool srgb, bool deferred,
+		VkBuffer sharedStagingBuffer, VkDeviceSize bufferOffset);
+
 	// Legacy immediate mode constructors (kept for compatibility)
 	SpellTexture(SpellDevice& device, const std::string& texturePath, bool srgb = true);
 	SpellTexture(SpellDevice& device, bool srgb = true);
@@ -57,6 +62,7 @@ public:
 private:
 	void prepareTextureImage(const std::string& texturePath);
 	void prepareFromDecodedData(const DecodedImageData& decoded);
+	void prepareImageOnly(const DecodedImageData& decoded);
 	void prepareFallbackTextureImage();
 	void prepareCustomColorImage(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 
@@ -80,6 +86,8 @@ private:
 	// Deferred upload state
 	VkBuffer stagingBuffer_ = VK_NULL_HANDLE;
 	VkDeviceMemory stagingBufferMemory_ = VK_NULL_HANDLE;
+	bool ownsStaging_ = true;  // false when using shared staging buffer
+	VkDeviceSize stagingBufferOffset_ = 0;
 	int32_t texWidth_ = 0;
 	int32_t texHeight_ = 0;
 	bool needsMipmaps_ = false;

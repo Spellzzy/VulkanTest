@@ -441,8 +441,12 @@ void SpellDevice::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t wid
 }
 
 void SpellDevice::cmdCopyBufferToImage(VkCommandBuffer cmd, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
+	cmdCopyBufferToImage(cmd, buffer, image, width, height, 0);
+}
+
+void SpellDevice::cmdCopyBufferToImage(VkCommandBuffer cmd, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, VkDeviceSize bufferOffset) {
 	VkBufferImageCopy region{};
-	region.bufferOffset = 0;
+	region.bufferOffset = bufferOffset;
 	region.bufferRowLength = 0;
 	region.bufferImageHeight = 0;
 	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;

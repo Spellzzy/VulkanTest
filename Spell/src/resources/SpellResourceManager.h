@@ -7,6 +7,7 @@
 #include <vector>
 #include <memory>
 #include <chrono>
+#include <future>
 
 namespace Spell {
 
@@ -44,10 +45,20 @@ public:
 	float lastModelLoadTimeMs() const { return lastModelLoadTimeMs_; }
 	float lastTextureLoadTimeMs() const { return lastTextureLoadTimeMs_; }
 	float lastTotalLoadTimeMs() const { return lastTotalLoadTimeMs_; }
+	float lastDecodeOverlapMs() const { return lastDecodeOverlapMs_; }
 
 private:
+	// Pre-parse .mtl file to extract texture paths without loading the full model
+	std::vector<MaterialInfo> parseMtlTexturePaths(const std::string& objPath);
+
 	void createFallbackWhiteTexture();
 	void loadMaterialTextures();
+	// Overload: accepts pre-decoded images from parallel decode
+	void loadMaterialTexturesFromDecoded(
+		const std::vector<MaterialInfo>& materials,
+		std::vector<std::future<DecodedImageData>>& futures,
+		const std::vector<bool>& hasFile,
+		const std::vector<bool>& srgbFlags);
 	void submitBatchedTextureUpload();
 
 	SpellDevice& device_;
@@ -60,9 +71,14 @@ private:
 	std::unique_ptr<SpellModel> model_;
 	std::vector<std::unique_ptr<SpellTexture>> textures_; // [0] = fallback, [1..N] = material textures
 
+	// Shared staging buffer for batch texture upload (owned by ResourceManager)
+	VkBuffer sharedStagingBuffer_ = VK_NULL_HANDLE;
+	VkDeviceMemory sharedStagingMemory_ = VK_NULL_HANDLE;
+
 	float lastModelLoadTimeMs_ = 0.0f;
 	float lastTextureLoadTimeMs_ = 0.0f;
 	float lastTotalLoadTimeMs_ = 0.0f;
+	float lastDecodeOverlapMs_ = 0.0f;  // Time saved by parallel decode
 };
 
 } // namespace Spell

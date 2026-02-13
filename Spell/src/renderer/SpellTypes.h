@@ -38,6 +38,7 @@ struct RenderStats {
 	float modelLoadTimeMs = 0.0f;
 	float textureLoadTimeMs = 0.0f;
 	float totalLoadTimeMs = 0.0f;
+	float decodeOverlapMs = 0.0f;  // Time saved by parallel model+texture loading
 };
 
 } // namespace Spell

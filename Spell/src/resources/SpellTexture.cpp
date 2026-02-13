@@ -75,6 +75,25 @@ SpellTexture::SpellTexture(SpellDevice& device, const DecodedImageData& decoded,
 	}
 }
 
+// Shared staging buffer mode: only create VkImage, no individual staging allocation
+SpellTexture::SpellTexture(SpellDevice& device, const DecodedImageData& decoded, bool srgb, bool deferred,
+	VkBuffer sharedStagingBuffer, VkDeviceSize bufferOffset)
+	: device_(device), srgb_(srgb), deferred_(deferred),
+	  stagingBuffer_(sharedStagingBuffer), ownsStaging_(false), stagingBufferOffset_(bufferOffset) {
+	prepareImageOnly(decoded);
+	createTextureImageView();
+	createTextureSampler();
+	if (!deferred_) {
+		VkCommandBuffer cmd = device_.beginSingleTimeCommands();
+		recordUpload(cmd);
+		if (needsMipmaps_) {
+			recordMipmaps(cmd);
+		}
+		device_.endSingleTimeCommands(cmd);
+		finalizeStagingCleanup();
+	}
+}
+
 // ============================================================
 // Legacy immediate mode constructors
 // ============================================================
@@ -157,6 +176,20 @@ void SpellTexture::prepareFromDecodedData(const DecodedImageData& decoded) {
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage_, textureImageMemory_);
 }
 
+void SpellTexture::prepareImageOnly(const DecodedImageData& decoded) {
+	texWidth_ = decoded.width;
+	texHeight_ = decoded.height;
+
+	mipLevels_ = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth_, texHeight_)))) + 1;
+	needsMipmaps_ = (mipLevels_ > 1);
+	VkFormat format = getFormat();
+
+	device_.createImage(texWidth_, texHeight_, mipLevels_, VK_SAMPLE_COUNT_1_BIT, format,
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage_, textureImageMemory_);
+}
+
 void SpellTexture::prepareFallbackTextureImage() {
 	mipLevels_ = 1;
 	texWidth_ = 1;
@@ -224,7 +257,7 @@ void SpellTexture::recordUpload(VkCommandBuffer cmd) {
 
 	// Copy staging buffer to image
 	device_.cmdCopyBufferToImage(cmd, stagingBuffer_, textureImage_,
-		static_cast<uint32_t>(texWidth_), static_cast<uint32_t>(texHeight_));
+		static_cast<uint32_t>(texWidth_), static_cast<uint32_t>(texHeight_), stagingBufferOffset_);
 
 	// If no mipmaps needed, transition directly to SHADER_READ_ONLY
 	if (!needsMipmaps_) {
@@ -312,6 +345,12 @@ void SpellTexture::recordMipmaps(VkCommandBuffer cmd) {
 }
 
 void SpellTexture::finalizeStagingCleanup() {
+	if (!ownsStaging_) {
+		// Shared staging buffer: don't destroy, just clear reference
+		stagingBuffer_ = VK_NULL_HANDLE;
+		stagingBufferMemory_ = VK_NULL_HANDLE;
+		return;
+	}
 	if (stagingBuffer_ != VK_NULL_HANDLE) {
 		vkDestroyBuffer(device_.device(), stagingBuffer_, nullptr);
 		stagingBuffer_ = VK_NULL_HANDLE;

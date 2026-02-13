@@ -81,6 +81,15 @@ bool SpellInspector::draw(SpellResourceManager& resources, LightPushConstantData
 				"纹理加载耗时\n"
 				"包括图片解码、Staging Buffer 创建、\n"
 				"GPU 纹理上传和 Mipmap 生成");
+
+		if (stats.decodeOverlapMs > 0.0f) {
+			ImGui::TextColored(ImVec4(0.4f, 0.8f, 0.4f, 1.0f), "  Overlap:  -%.0f ms", stats.decodeOverlapMs);
+			if (ImGui::IsItemHovered())
+				ImGui::SetTooltip("Parallel Overlap Savings\n\n"
+					"并行加载节省的时间\n"
+					"纹理 CPU 解码与模型加载并行执行，\n"
+					"此时间被隐藏在模型加载过程中");
+		}
 	}
 
 	if (ImGui::CollapsingHeader("GPU Pipeline Stats", ImGuiTreeNodeFlags_DefaultOpen)) {

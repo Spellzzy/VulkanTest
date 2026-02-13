@@ -343,6 +343,7 @@ void SpellApp::renderFrame() {
 	renderStats_.modelLoadTimeMs = resources_.lastModelLoadTimeMs();
 	renderStats_.textureLoadTimeMs = resources_.lastTextureLoadTimeMs();
 	renderStats_.totalLoadTimeMs = resources_.lastTotalLoadTimeMs();
+	renderStats_.decodeOverlapMs = resources_.lastDecodeOverlapMs();
 
 	imgui_->newFrame();
 	drawImGuiPanels();
