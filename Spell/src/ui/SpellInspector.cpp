@@ -59,6 +59,28 @@ bool SpellInspector::draw(SpellResourceManager& resources, LightPushConstantData
 				"材质数量\n"
 				"模型使用的材质数量（来自 .mtl 文件）\n"
 				"每个材质可关联多张纹理贴图");
+
+		ImGui::Separator();
+		ImGui::Text("Load Time:   %.1f ms", stats.totalLoadTimeMs);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Total Load Time\n\n"
+				"资源总加载耗时\n"
+				"包括模型加载和纹理加载的总时间\n"
+				"切换模型后会更新");
+
+		ImGui::Text("  Model:     %.1f ms", stats.modelLoadTimeMs);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Model Load Time\n\n"
+				"模型加载耗时\n"
+				"包括 OBJ 文件解析、顶点去重、\n"
+				"顶点/索引缓冲区创建和 GPU 上传");
+
+		ImGui::Text("  Textures:  %.1f ms", stats.textureLoadTimeMs);
+		if (ImGui::IsItemHovered())
+			ImGui::SetTooltip("Texture Load Time\n\n"
+				"纹理加载耗时\n"
+				"包括图片解码、Staging Buffer 创建、\n"
+				"GPU 纹理上传和 Mipmap 生成");
 	}
 
 	if (ImGui::CollapsingHeader("GPU Pipeline Stats", ImGuiTreeNodeFlags_DefaultOpen)) {

@@ -340,6 +340,9 @@ void SpellApp::renderFrame() {
 	renderStats_.materialCount = static_cast<uint32_t>(resources_.model()->getMaterials().size());
 	renderStats_.fps = ImGui::GetIO().Framerate;
 	renderStats_.frameTimeMs = 1000.0f / renderStats_.fps;
+	renderStats_.modelLoadTimeMs = resources_.lastModelLoadTimeMs();
+	renderStats_.textureLoadTimeMs = resources_.lastTextureLoadTimeMs();
+	renderStats_.totalLoadTimeMs = resources_.lastTotalLoadTimeMs();
 
 	imgui_->newFrame();
 	drawImGuiPanels();

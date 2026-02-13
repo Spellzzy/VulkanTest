@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <chrono>
 
 namespace Spell {
 
@@ -40,6 +41,10 @@ public:
 	void loadInitialResources();
 	void reloadResources();
 
+	float lastModelLoadTimeMs() const { return lastModelLoadTimeMs_; }
+	float lastTextureLoadTimeMs() const { return lastTextureLoadTimeMs_; }
+	float lastTotalLoadTimeMs() const { return lastTotalLoadTimeMs_; }
+
 private:
 	void createFallbackWhiteTexture();
 	void loadMaterialTextures();
@@ -53,6 +58,10 @@ private:
 
 	std::unique_ptr<SpellModel> model_;
 	std::vector<std::unique_ptr<SpellTexture>> textures_; // [0] = fallback, [1..N] = material textures
+
+	float lastModelLoadTimeMs_ = 0.0f;
+	float lastTextureLoadTimeMs_ = 0.0f;
+	float lastTotalLoadTimeMs_ = 0.0f;
 };
 
 } // namespace Spell

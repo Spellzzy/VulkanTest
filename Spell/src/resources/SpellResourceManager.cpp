@@ -12,11 +12,25 @@ SpellResourceManager::SpellResourceManager(SpellDevice& device)
 }
 
 void SpellResourceManager::loadInitialResources() {
-	model_ = std::make_unique<SpellModel>(device_, modelPath_);
+	auto totalStart = std::chrono::high_resolution_clock::now();
 
+	auto modelStart = std::chrono::high_resolution_clock::now();
+	model_ = std::make_unique<SpellModel>(device_, modelPath_);
+	auto modelEnd = std::chrono::high_resolution_clock::now();
+	lastModelLoadTimeMs_ = std::chrono::duration<float, std::milli>(modelEnd - modelStart).count();
+
+	auto texStart = std::chrono::high_resolution_clock::now();
 	textures_.clear();
 	createFallbackWhiteTexture();
 	loadMaterialTextures();
+	auto texEnd = std::chrono::high_resolution_clock::now();
+	lastTextureLoadTimeMs_ = std::chrono::duration<float, std::milli>(texEnd - texStart).count();
+
+	lastTotalLoadTimeMs_ = std::chrono::duration<float, std::milli>(texEnd - totalStart).count();
+
+	std::cout << "[Spell] Load times - Model: " << lastModelLoadTimeMs_
+		<< "ms, Textures: " << lastTextureLoadTimeMs_
+		<< "ms, Total: " << lastTotalLoadTimeMs_ << "ms" << std::endl;
 }
 
 void SpellResourceManager::reloadResources() {
@@ -25,13 +39,26 @@ void SpellResourceManager::reloadResources() {
 	model_.reset();
 	textures_.clear();
 
-	model_ = std::make_unique<SpellModel>(device_, modelPath_);
+	auto totalStart = std::chrono::high_resolution_clock::now();
 
+	auto modelStart = std::chrono::high_resolution_clock::now();
+	model_ = std::make_unique<SpellModel>(device_, modelPath_);
+	auto modelEnd = std::chrono::high_resolution_clock::now();
+	lastModelLoadTimeMs_ = std::chrono::duration<float, std::milli>(modelEnd - modelStart).count();
+
+	auto texStart = std::chrono::high_resolution_clock::now();
 	createFallbackWhiteTexture();
 	loadMaterialTextures();
+	auto texEnd = std::chrono::high_resolution_clock::now();
+	lastTextureLoadTimeMs_ = std::chrono::duration<float, std::milli>(texEnd - texStart).count();
+
+	lastTotalLoadTimeMs_ = std::chrono::duration<float, std::milli>(texEnd - totalStart).count();
 
 	std::cout << "[Spell] Reloaded model: " << modelPath_
-		<< ", total textures: " << textures_.size() << std::endl;
+		<< ", total textures: " << textures_.size()
+		<< " - Load times - Model: " << lastModelLoadTimeMs_
+		<< "ms, Textures: " << lastTextureLoadTimeMs_
+		<< "ms, Total: " << lastTotalLoadTimeMs_ << "ms" << std::endl;
 }
 
 void SpellResourceManager::createFallbackWhiteTexture() {

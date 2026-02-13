@@ -33,6 +33,11 @@ struct RenderStats {
 	uint64_t gpuVSInvocations = 0;
 	uint64_t gpuClippingPrimitives = 0;
 	uint64_t gpuFSInvocations = 0;
+
+	// Resource load times (ms)
+	float modelLoadTimeMs = 0.0f;
+	float textureLoadTimeMs = 0.0f;
+	float totalLoadTimeMs = 0.0f;
 };
 
 } // namespace Spell
