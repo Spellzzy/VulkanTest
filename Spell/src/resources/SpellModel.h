@@ -16,6 +16,9 @@ namespace Spell {
 
 struct MaterialInfo {
 	std::string diffuseTexturePath;
+	std::string normalTexturePath;
+	std::string metallicTexturePath;
+	std::string roughnessTexturePath;
 };
 
 struct Vertex {

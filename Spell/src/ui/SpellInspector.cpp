@@ -95,8 +95,14 @@ bool SpellInspector::draw(SpellResourceManager& resources, LightPushConstantData
 		ImGui::Text("Material Textures (auto-loaded from .mtl):");
 		const auto& mats = resources.model()->getMaterials();
 		for (size_t i = 0; i < mats.size(); i++) {
-			ImGui::Text("  [%zu] %s", i,
-				mats[i].diffuseTexturePath.empty() ? "(no texture)" : mats[i].diffuseTexturePath.c_str());
+			ImGui::Text("  [%zu] diffuse: %s", i,
+				mats[i].diffuseTexturePath.empty() ? "(none)" : mats[i].diffuseTexturePath.c_str());
+			ImGui::Text("       normal: %s",
+				mats[i].normalTexturePath.empty() ? "(none)" : mats[i].normalTexturePath.c_str());
+			ImGui::Text("       metallic: %s",
+				mats[i].metallicTexturePath.empty() ? "(none)" : mats[i].metallicTexturePath.c_str());
+			ImGui::Text("       roughness: %s",
+				mats[i].roughnessTexturePath.empty() ? "(none)" : mats[i].roughnessTexturePath.c_str());
 		}
 	}
 

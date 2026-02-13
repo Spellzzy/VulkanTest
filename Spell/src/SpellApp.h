@@ -59,7 +59,7 @@ private:
 	SpellInspector inspector_;
 
 	bool needReload_{ false };
-	LightPushConstantData lightData_{ glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(2.0f, 2.0f, 2.0f) };
+	LightPushConstantData lightData_{ glm::vec3(23.47f, 21.31f, 20.79f), glm::vec3(2.0f, 2.0f, 2.0f) };
 };
 
 } // namespace Spell

@@ -7,7 +7,7 @@ namespace Spell {
 
 class SpellInspector {
 public:
-	// 返回 true 表示资源需要重载
+	// Returns true if resources need to be reloaded
 	bool draw(SpellResourceManager& resources, LightPushConstantData& light);
 
 private:

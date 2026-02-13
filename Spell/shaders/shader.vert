@@ -9,8 +9,8 @@ layout(location = 4) in int inMaterialIndex;
 
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
-layout(location = 2) out vec3 fragNormal;
-layout(location = 3) out vec4 fragPosition;
+layout(location = 2) out vec3 fragNormalW;
+layout(location = 3) out vec3 fragPositionW;
 layout(location = 4) flat out int fragMaterialIndex;
 
 layout(binding = 0) uniform UniformBufferObject {
@@ -20,10 +20,15 @@ layout(binding = 0) uniform UniformBufferObject {
 } ubo;
 
 void main() {
-	gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
+	vec4 worldPos = ubo.model * vec4(inPosition, 1.0);
+	gl_Position = ubo.proj * ubo.view * worldPos;
+
 	fragColor = inColor;
-	fragTexCoord  = inTexCoord;
-	fragNormal = inNormal;
-	fragPosition = gl_Position;
+	fragTexCoord = inTexCoord;
+	fragPositionW = worldPos.xyz;
+
+	mat3 normalMatrix = transpose(inverse(mat3(ubo.model)));
+	fragNormalW = normalMatrix * inNormal;
+
 	fragMaterialIndex = inMaterialIndex;
 }

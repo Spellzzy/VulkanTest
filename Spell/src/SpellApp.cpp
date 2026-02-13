@@ -53,7 +53,7 @@ void SpellApp::createDescriptorSetLayout() {
 	uboLayoutBinding.binding = 0;
 	uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	uboLayoutBinding.descriptorCount = 1;
-	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 	uboLayoutBinding.pImmutableSamplers = nullptr;
 
 	VkDescriptorSetLayoutBinding samplerLayoutBinding{};
@@ -233,6 +233,8 @@ void SpellApp::updateUniformBuffer(int frameIndex) {
 		glm::vec3(2.0f, 2.0f, 2.0f),
 		glm::vec3(0.0f, 0.0f, 0.0f),
 		glm::vec3(0.0f, 0.0f, 1.0f));
+
+	ubo.camPos = glm::vec3(2.0f, 2.0f, 2.0f);
 
 	auto extent = renderer_.getSwapChainExtent();
 	ubo.proj = glm::perspective(

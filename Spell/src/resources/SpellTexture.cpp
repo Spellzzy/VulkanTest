@@ -8,16 +8,56 @@
 
 namespace Spell {
 
-SpellTexture::SpellTexture(SpellDevice& device, const std::string& texturePath)
-	: device_(device) {
+SpellTexture::SpellTexture(SpellDevice& device, const std::string& texturePath, bool srgb)
+	: device_(device), srgb_(srgb) {
 	createTextureImage(texturePath);
 	createTextureImageView();
 	createTextureSampler();
 }
 
-SpellTexture::SpellTexture(SpellDevice& device)
-	: device_(device) {
-	createWhiteTextureImage();
+SpellTexture::SpellTexture(SpellDevice& device, bool srgb)
+	: device_(device), srgb_(srgb) {
+	createFallbackTextureImage();
+	createTextureImageView();
+	createTextureSampler();
+}
+
+SpellTexture::SpellTexture(SpellDevice& device, bool srgb, unsigned char r, unsigned char g, unsigned char b, unsigned char a)
+	: device_(device), srgb_(srgb) {
+	mipLevels_ = 1;
+	const uint32_t texWidth = 1, texHeight = 1;
+	VkFormat format = getFormat();
+
+	const unsigned char pixel[4] = { r, g, b, a };
+	VkDeviceSize imageSize = 4;
+
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	device_.createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		stagingBuffer, stagingBufferMemory);
+
+	void* data;
+	vkMapMemory(device_.device(), stagingBufferMemory, 0, imageSize, 0, &data);
+	memcpy(data, pixel, imageSize);
+	vkUnmapMemory(device_.device(), stagingBufferMemory);
+
+	device_.createImage(texWidth, texHeight, mipLevels_, VK_SAMPLE_COUNT_1_BIT, format,
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage_, textureImageMemory_);
+
+	device_.transitionImageLayout(textureImage_, format,
+		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels_);
+
+	device_.copyBufferToImage(stagingBuffer, textureImage_, texWidth, texHeight);
+
+	device_.transitionImageLayout(textureImage_, format,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels_);
+
+	vkDestroyBuffer(device_.device(), stagingBuffer, nullptr);
+	vkFreeMemory(device_.device(), stagingBufferMemory, nullptr);
+
 	createTextureImageView();
 	createTextureSampler();
 }
@@ -39,6 +79,7 @@ void SpellTexture::createTextureImage(const std::string& texturePath) {
 	}
 
 	mipLevels_ = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+	VkFormat format = getFormat();
 
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
@@ -53,12 +94,12 @@ void SpellTexture::createTextureImage(const std::string& texturePath) {
 
 	stbi_image_free(pixels);
 
-	device_.createImage(texWidth, texHeight, mipLevels_, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB,
+	device_.createImage(texWidth, texHeight, mipLevels_, VK_SAMPLE_COUNT_1_BIT, format,
 		VK_IMAGE_TILING_OPTIMAL,
 		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage_, textureImageMemory_);
 
-	device_.transitionImageLayout(textureImage_, VK_FORMAT_R8G8B8A8_SRGB,
+	device_.transitionImageLayout(textureImage_, format,
 		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels_);
 
 	device_.copyBufferToImage(stagingBuffer, textureImage_,
@@ -67,13 +108,19 @@ void SpellTexture::createTextureImage(const std::string& texturePath) {
 	vkDestroyBuffer(device_.device(), stagingBuffer, nullptr);
 	vkFreeMemory(device_.device(), stagingBufferMemory, nullptr);
 
-	generateMipmaps(textureImage_, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, mipLevels_);
+	generateMipmaps(textureImage_, format, texWidth, texHeight, mipLevels_);
 }
 
-void SpellTexture::createWhiteTextureImage() {
+void SpellTexture::createFallbackTextureImage() {
 	mipLevels_ = 1;
 	const uint32_t texWidth = 1, texHeight = 1;
-	const unsigned char whitePixel[4] = { 255, 255, 255, 255 };
+	VkFormat format = getFormat();
+
+	// sRGB fallback: white (255,255,255,255)
+	// UNORM fallback: default normal pointing up (128,128,255,255) = (0,0,1) in tangent space
+	const unsigned char srgbPixel[4] = { 255, 255, 255, 255 };
+	const unsigned char unormPixel[4] = { 128, 128, 255, 255 };
+	const unsigned char* pixel = srgb_ ? srgbPixel : unormPixel;
 	VkDeviceSize imageSize = 4;
 
 	VkBuffer stagingBuffer;
@@ -84,20 +131,20 @@ void SpellTexture::createWhiteTextureImage() {
 
 	void* data;
 	vkMapMemory(device_.device(), stagingBufferMemory, 0, imageSize, 0, &data);
-	memcpy(data, whitePixel, imageSize);
+	memcpy(data, pixel, imageSize);
 	vkUnmapMemory(device_.device(), stagingBufferMemory);
 
-	device_.createImage(texWidth, texHeight, mipLevels_, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB,
+	device_.createImage(texWidth, texHeight, mipLevels_, VK_SAMPLE_COUNT_1_BIT, format,
 		VK_IMAGE_TILING_OPTIMAL,
 		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage_, textureImageMemory_);
 
-	device_.transitionImageLayout(textureImage_, VK_FORMAT_R8G8B8A8_SRGB,
+	device_.transitionImageLayout(textureImage_, format,
 		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels_);
 
 	device_.copyBufferToImage(stagingBuffer, textureImage_, texWidth, texHeight);
 
-	device_.transitionImageLayout(textureImage_, VK_FORMAT_R8G8B8A8_SRGB,
+	device_.transitionImageLayout(textureImage_, format,
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels_);
 
 	vkDestroyBuffer(device_.device(), stagingBuffer, nullptr);
@@ -105,7 +152,7 @@ void SpellTexture::createWhiteTextureImage() {
 }
 
 void SpellTexture::createTextureImageView() {
-	textureImageView_ = device_.createImageView(textureImage_, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels_);
+	textureImageView_ = device_.createImageView(textureImage_, getFormat(), VK_IMAGE_ASPECT_COLOR_BIT, mipLevels_);
 }
 
 void SpellTexture::createTextureSampler() {

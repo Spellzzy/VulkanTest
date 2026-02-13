@@ -44,13 +44,28 @@ void SpellModel::loadModel(const std::string& filepath) {
 		if (!mat.diffuse_texname.empty()) {
 			info.diffuseTexturePath = mtlBaseDir + mat.diffuse_texname;
 		}
+		if (!mat.bump_texname.empty()) {
+			info.normalTexturePath = mtlBaseDir + mat.bump_texname;
+		}
+		if (!mat.metallic_texname.empty()) {
+			info.metallicTexturePath = mtlBaseDir + mat.metallic_texname;
+		}
+		if (!mat.roughness_texname.empty()) {
+			info.roughnessTexturePath = mtlBaseDir + mat.roughness_texname;
+		}
 		materials_.push_back(info);
 	}
 
 	std::cout << "[Spell] Loaded " << materials_.size() << " material(s) from " << filepath << std::endl;
 	for (size_t i = 0; i < materials_.size(); i++) {
 		std::cout << "  [" << i << "] diffuse: "
-			<< (materials_[i].diffuseTexturePath.empty() ? "(none)" : materials_[i].diffuseTexturePath) << std::endl;
+			<< (materials_[i].diffuseTexturePath.empty() ? "(none)" : materials_[i].diffuseTexturePath)
+			<< ", normal: "
+			<< (materials_[i].normalTexturePath.empty() ? "(none)" : materials_[i].normalTexturePath)
+			<< ", metallic: "
+			<< (materials_[i].metallicTexturePath.empty() ? "(none)" : materials_[i].metallicTexturePath)
+			<< ", roughness: "
+			<< (materials_[i].roughnessTexturePath.empty() ? "(none)" : materials_[i].roughnessTexturePath) << std::endl;
 	}
 
 	std::unordered_map<Vertex, uint32_t> uniqueVertices{};

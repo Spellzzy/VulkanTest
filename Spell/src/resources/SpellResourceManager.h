@@ -27,7 +27,10 @@ public:
 
 	SpellModel* model() const { return model_.get(); }
 
-	// Bindless texture array: index 0 is fallback white, index 1..N are material textures
+	// Texture slots per material (diffuse + normal + metallic + roughness)
+	static constexpr uint32_t TEXTURES_PER_MATERIAL = 4;
+
+	// Bindless texture array: index 0,1 are fallback (diffuse, normal), then per-material slots
 	const std::vector<std::unique_ptr<SpellTexture>>& textures() const { return textures_; }
 	uint32_t textureCount() const { return static_cast<uint32_t>(textures_.size()); }
 
