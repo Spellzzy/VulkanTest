@@ -3,6 +3,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "SpellApp.h"
+#include <imgui.h>
 #include <chrono>
 #include <stdexcept>
 #include <array>
@@ -21,9 +22,16 @@ SpellApp::SpellApp() {
 	createUniformBuffers();
 	createDescriptorPool();
 	createDescriptorSets();
+
+	imgui_ = std::make_unique<SpellImGui>(
+		window_, device_, renderer_.getSwapChainRenderPass(),
+		static_cast<uint32_t>(renderer_.getSwapChainImageCount()));
 }
 
 SpellApp::~SpellApp() {
+	vkDeviceWaitIdle(device_.device());
+	imgui_.reset();
+
 	for (size_t i = 0; i < uniformBuffers_.size(); i++) {
 		vkDestroyBuffer(device_.device(), uniformBuffers_[i], nullptr);
 		vkFreeMemory(device_.device(), uniformBuffersMemory_[i], nullptr);
@@ -217,8 +225,6 @@ void SpellApp::renderFrame() {
 
 	renderer_.beginRenderPass(commandBuffer);
 
-	lightData_.color = glm::vec3(1.0, 1.0, 0.0);
-	lightData_.position = glm::vec3(2.0, 2.0, 2.0);
 	vkCmdPushConstants(commandBuffer, pipelineLayout_, VK_SHADER_STAGE_FRAGMENT_BIT,
 		0, sizeof(LightPushConstantData), &lightData_);
 
@@ -230,8 +236,26 @@ void SpellApp::renderFrame() {
 
 	model_->draw(commandBuffer);
 
+	// ImGui 绘制（在同一个 RenderPass 内，场景之后）
+	imgui_->newFrame();
+	drawImGuiPanels();
+	imgui_->render(commandBuffer);
+
 	renderer_.endRenderPass(commandBuffer);
 	renderer_.endFrame();
+}
+
+void SpellApp::drawImGuiPanels() {
+	ImGui::Begin("Spell Engine");
+
+	ImGui::Text("FPS: %.1f (%.3f ms/frame)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+	ImGui::Separator();
+
+	ImGui::Text("Light");
+	ImGui::ColorEdit3("Color", &lightData_.color.x);
+	ImGui::DragFloat3("Light Position", &lightData_.position.x, 0.1f, -10.0f, 10.0f);
+
+	ImGui::End();
 }
 
 } // namespace Spell

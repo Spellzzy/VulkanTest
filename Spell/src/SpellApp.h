@@ -6,6 +6,7 @@
 #include "renderer/SpellPipeline.h"
 #include "resources/SpellModel.h"
 #include "resources/SpellTexture.h"
+#include "ui/SpellImGui.h"
 
 #include <memory>
 #include <vector>
@@ -45,6 +46,7 @@ private:
 	void createDescriptorSets();
 	void updateUniformBuffer(int frameIndex);
 	void renderFrame();
+	void drawImGuiPanels();
 
 	SpellWindow window_{ WIDTH, HEIGHT, "Spell Engine" };
 	SpellDevice device_{ window_ };
@@ -61,8 +63,9 @@ private:
 
 	std::unique_ptr<SpellModel> model_;
 	std::unique_ptr<SpellTexture> texture_;
+	std::unique_ptr<SpellImGui> imgui_;
 
-	LightPushConstantData lightData_{};
+	LightPushConstantData lightData_{ glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(2.0f, 2.0f, 2.0f) };
 };
 
 } // namespace Spell
