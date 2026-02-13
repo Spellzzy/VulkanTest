@@ -18,6 +18,17 @@ SpellImGui::SpellImGui(SpellWindow& window, SpellDevice& device, VkRenderPass re
 
 	ImGui::StyleColorsDark();
 
+	// 加载中文字体
+	ImFontConfig fontConfig;
+	fontConfig.OversampleH = 2;
+	fontConfig.OversampleV = 1;
+	io.Fonts->AddFontFromFileTTF(
+		"assets/msyh.ttc",
+		16.0f,
+		&fontConfig,
+		io.Fonts->GetGlyphRangesChineseSimplifiedCommon()
+	);
+
 	// 初始化 GLFW 后端
 	ImGui_ImplGlfw_InitForVulkan(window.getGLFWwindow(), true);
 

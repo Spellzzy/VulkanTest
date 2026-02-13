@@ -26,6 +26,13 @@ struct RenderStats {
 	uint32_t materialCount = 0;
 	float frameTimeMs = 0.0f;
 	float fps = 0.0f;
+
+	// GPU Pipeline Statistics (from VkQueryPool)
+	uint64_t gpuIAVertices = 0;
+	uint64_t gpuIAPrimitives = 0;
+	uint64_t gpuVSInvocations = 0;
+	uint64_t gpuClippingPrimitives = 0;
+	uint64_t gpuFSInvocations = 0;
 };
 
 } // namespace Spell

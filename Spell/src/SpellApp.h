@@ -54,6 +54,11 @@ private:
 
 	std::unique_ptr<SpellImGui> imgui_;
 
+	// Pipeline Statistics Query
+	VkQueryPool statsQueryPool_ = VK_NULL_HANDLE;
+	static constexpr uint32_t STATS_QUERY_COUNT = 5; // number of pipeline statistic bits
+	bool statsQueryReady_ = false;
+
 	// Subsystems
 	SpellResourceManager resources_{ device_ };
 	SpellInspector inspector_;

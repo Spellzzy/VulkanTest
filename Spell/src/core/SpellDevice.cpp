@@ -112,6 +112,7 @@ void SpellDevice::createLogicalDevice() {
 
 	vkGetPhysicalDeviceFeatures(physicalDevice_, &deviceFeatures_);
 	deviceFeatures_.sampleRateShading = VK_TRUE;
+	deviceFeatures_.pipelineStatisticsQuery = VK_TRUE;
 
 	// Query descriptor indexing features
 	descriptorIndexingFeatures_.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;

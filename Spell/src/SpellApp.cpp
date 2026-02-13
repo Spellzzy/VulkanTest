@@ -24,11 +24,31 @@ SpellApp::SpellApp() {
 	imgui_ = std::make_unique<SpellImGui>(
 		window_, device_, renderer_.getSwapChainRenderPass(),
 		static_cast<uint32_t>(renderer_.getSwapChainImageCount()));
+
+	// Create pipeline statistics query pool
+	VkQueryPoolCreateInfo queryPoolInfo{};
+	queryPoolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+	queryPoolInfo.queryType = VK_QUERY_TYPE_PIPELINE_STATISTICS;
+	queryPoolInfo.queryCount = SpellSwapChain::MAX_FRAMES_IN_FLIGHT;
+	queryPoolInfo.pipelineStatistics =
+		VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_VERTICES_BIT |
+		VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_PRIMITIVES_BIT |
+		VK_QUERY_PIPELINE_STATISTIC_VERTEX_SHADER_INVOCATIONS_BIT |
+		VK_QUERY_PIPELINE_STATISTIC_CLIPPING_PRIMITIVES_BIT |
+		VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT;
+
+	if (vkCreateQueryPool(device_.device(), &queryPoolInfo, nullptr, &statsQueryPool_) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create pipeline statistics query pool!");
+	}
 }
 
 SpellApp::~SpellApp() {
 	vkDeviceWaitIdle(device_.device());
 	imgui_.reset();
+
+	if (statsQueryPool_ != VK_NULL_HANDLE) {
+		vkDestroyQueryPool(device_.device(), statsQueryPool_, nullptr);
+	}
 
 	for (size_t i = 0; i < uniformBuffers_.size(); i++) {
 		vkDestroyBuffer(device_.device(), uniformBuffers_[i], nullptr);
@@ -283,10 +303,35 @@ void SpellApp::renderFrame() {
 	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
 		pipelineLayout_, 0, 1, &descriptorSets_[frameIndex], 0, nullptr);
 
+	// Pipeline statistics query: reset and begin
+	vkCmdResetQueryPool(commandBuffer, statsQueryPool_, frameIndex, 1);
+	vkCmdBeginQuery(commandBuffer, statsQueryPool_, frameIndex, 0);
+
 	resources_.model()->draw(commandBuffer);
 
+	// End query before ImGui rendering so we only measure scene draw calls
+	vkCmdEndQuery(commandBuffer, statsQueryPool_, frameIndex);
+
+	// Read previous frame's query results (avoids GPU stall)
+	int prevFrame = (frameIndex + SpellSwapChain::MAX_FRAMES_IN_FLIGHT - 1) % SpellSwapChain::MAX_FRAMES_IN_FLIGHT;
+	if (statsQueryReady_) {
+		uint64_t stats[STATS_QUERY_COUNT]{};
+		VkResult queryResult = vkGetQueryPoolResults(
+			device_.device(), statsQueryPool_,
+			prevFrame, 1,
+			sizeof(stats), stats, sizeof(uint64_t),
+			VK_QUERY_RESULT_64_BIT);
+		if (queryResult == VK_SUCCESS) {
+			renderStats_.gpuIAVertices = stats[0];
+			renderStats_.gpuIAPrimitives = stats[1];
+			renderStats_.gpuVSInvocations = stats[2];
+			renderStats_.gpuClippingPrimitives = stats[3];
+			renderStats_.gpuFSInvocations = stats[4];
+		}
+	}
+	statsQueryReady_ = true;
+
 	// Collect render stats
-	renderStats_ = {};
 	renderStats_.drawCalls = 1;
 	renderStats_.vertices = resources_.model()->getVertexCount();
 	renderStats_.indices = resources_.model()->getIndexCount();
