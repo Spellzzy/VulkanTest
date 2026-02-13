@@ -4,25 +4,15 @@
 #include "core/SpellDevice.h"
 #include "renderer/SpellRenderer.h"
 #include "renderer/SpellPipeline.h"
-#include "resources/SpellModel.h"
-#include "resources/SpellTexture.h"
+#include "renderer/SpellTypes.h"
+#include "resources/SpellResourceManager.h"
 #include "ui/SpellImGui.h"
+#include "ui/SpellInspector.h"
 
 #include <memory>
 #include <vector>
 
 namespace Spell {
-
-struct UniformBufferObject {
-	alignas(16) glm::mat4 model;
-	alignas(16) glm::mat4 view;
-	alignas(16) glm::mat4 proj;
-};
-
-struct LightPushConstantData {
-	alignas(16) glm::vec3 color;
-	alignas(16) glm::vec3 position;
-};
 
 class SpellApp {
 public:
@@ -47,6 +37,7 @@ private:
 	void updateUniformBuffer(int frameIndex);
 	void renderFrame();
 	void drawImGuiPanels();
+	void rebuildDescriptors();
 
 	SpellWindow window_{ WIDTH, HEIGHT, "Spell Engine" };
 	SpellDevice device_{ window_ };
@@ -61,10 +52,13 @@ private:
 	std::vector<VkBuffer> uniformBuffers_;
 	std::vector<VkDeviceMemory> uniformBuffersMemory_;
 
-	std::unique_ptr<SpellModel> model_;
-	std::unique_ptr<SpellTexture> texture_;
 	std::unique_ptr<SpellImGui> imgui_;
 
+	// Subsystems
+	SpellResourceManager resources_{ device_ };
+	SpellInspector inspector_;
+
+	bool needReload_{ false };
 	LightPushConstantData lightData_{ glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(2.0f, 2.0f, 2.0f) };
 };
 

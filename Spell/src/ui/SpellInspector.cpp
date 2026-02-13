@@ -1,0 +1,102 @@
+#include "SpellInspector.h"
+#include "renderer/SpellTypes.h"
+
+#include <imgui.h>
+
+namespace Spell {
+
+bool SpellInspector::draw(SpellResourceManager& resources, LightPushConstantData& light) {
+	bool needReload = false;
+
+	ImGui::Begin("Inspector");
+
+	ImGui::Text("FPS: %.1f (%.3f ms/frame)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+	ImGui::Separator();
+
+	ImGui::Text("Light");
+	ImGui::ColorEdit3("Color", &light.color.x);
+	ImGui::DragFloat3("Position", &light.position.x, 0.1f, -10.0f, 10.0f);
+
+	ImGui::Separator();
+	ImGui::Text("Resources");
+
+	auto& availableModels = resources.availableModels();
+	auto& availableTextures = resources.availableTextures();
+
+	// Model selector
+	auto modelGetter = [](void* data, int idx, const char** out_text) -> bool {
+		auto& models = *static_cast<const std::vector<std::string>*>(data);
+		if (idx < 0 || idx >= static_cast<int>(models.size())) return false;
+		*out_text = models[idx].c_str();
+		return true;
+	};
+	ImGui::Combo("Model", &selectedModelIdx_, modelGetter,
+		const_cast<void*>(static_cast<const void*>(&availableModels)),
+		static_cast<int>(availableModels.size()));
+
+	if (resources.model()) {
+		ImGui::Text("  Vertices: %u  Indices: %u",
+			resources.model()->getVertexCount(), resources.model()->getIndexCount());
+	}
+
+	// Texture selector
+	auto texGetter = [](void* data, int idx, const char** out_text) -> bool {
+		auto& textures = *static_cast<const std::vector<std::string>*>(data);
+		if (idx < 0 || idx >= static_cast<int>(textures.size())) return false;
+		*out_text = textures[idx].c_str();
+		return true;
+	};
+	ImGui::Combo("Texture", &selectedTextureIdx_, texGetter,
+		const_cast<void*>(static_cast<const void*>(&availableTextures)),
+		static_cast<int>(availableTextures.size()));
+
+	if (resources.texture()) {
+		ImGui::Text("  Mip Levels: %u", resources.texture()->getMipLevels());
+	}
+
+	ImGui::Spacing();
+
+	bool modelChanged = (!availableModels.empty() &&
+		selectedModelIdx_ < static_cast<int>(availableModels.size()) &&
+		availableModels[selectedModelIdx_] != resources.modelPath());
+	bool textureChanged = (!availableTextures.empty() &&
+		selectedTextureIdx_ < static_cast<int>(availableTextures.size()) &&
+		availableTextures[selectedTextureIdx_] != resources.texturePath());
+
+	if (modelChanged || textureChanged) {
+		if (ImGui::Button("Apply Changes")) {
+			if (modelChanged) resources.setModelPath(availableModels[selectedModelIdx_]);
+			if (textureChanged) resources.setTexturePath(availableTextures[selectedTextureIdx_]);
+			needReload = true;
+		}
+		ImGui::SameLine();
+		ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "(pending changes)");
+	}
+
+	if (ImGui::Button("Force Reload")) {
+		needReload = true;
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Refresh File List")) {
+		resources.scanAvailableFiles();
+		syncSelection(resources);
+	}
+
+	ImGui::End();
+
+	return needReload;
+}
+
+void SpellInspector::syncSelection(const SpellResourceManager& resources) {
+	auto& models = resources.availableModels();
+	auto& textures = resources.availableTextures();
+
+	for (int i = 0; i < static_cast<int>(models.size()); i++) {
+		if (models[i] == resources.modelPath()) { selectedModelIdx_ = i; break; }
+	}
+	for (int i = 0; i < static_cast<int>(textures.size()); i++) {
+		if (textures[i] == resources.texturePath()) { selectedTextureIdx_ = i; break; }
+	}
+}
+
+} // namespace Spell

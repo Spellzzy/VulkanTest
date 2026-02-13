@@ -82,6 +82,7 @@ public:
 	void bind(VkCommandBuffer commandBuffer);
 	void draw(VkCommandBuffer commandBuffer);
 
+	uint32_t getVertexCount() const { return static_cast<uint32_t>(vertices_.size()); }
 	uint32_t getIndexCount() const { return static_cast<uint32_t>(indices_.size()); }
 
 private:

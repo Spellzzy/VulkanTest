@@ -153,7 +153,9 @@
     <ClCompile Include="src\renderer\SpellRenderer.cpp" />
     <ClCompile Include="src\resources\SpellModel.cpp" />
     <ClCompile Include="src\resources\SpellTexture.cpp" />
+    <ClCompile Include="src\resources\SpellResourceManager.cpp" />
     <ClCompile Include="src\ui\SpellImGui.cpp" />
+    <ClCompile Include="src\ui\SpellInspector.cpp" />
     <ClCompile Include="$(IMGUI_DIR)\imgui.cpp" />
     <ClCompile Include="$(IMGUI_DIR)\imgui_demo.cpp" />
     <ClCompile Include="$(IMGUI_DIR)\imgui_draw.cpp" />
@@ -171,7 +173,10 @@
     <ClInclude Include="src\renderer\SpellRenderer.h" />
     <ClInclude Include="src\resources\SpellModel.h" />
     <ClInclude Include="src\resources\SpellTexture.h" />
+    <ClInclude Include="src\renderer\SpellTypes.h" />
+    <ClInclude Include="src\resources\SpellResourceManager.h" />
     <ClInclude Include="src\ui\SpellImGui.h" />
+    <ClInclude Include="src\ui\SpellInspector.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

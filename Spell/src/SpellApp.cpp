@@ -7,7 +7,6 @@
 #include <chrono>
 #include <stdexcept>
 #include <array>
-#include <iostream>
 
 namespace Spell {
 
@@ -16,8 +15,7 @@ SpellApp::SpellApp() {
 	createPipelineLayout();
 	createPipeline();
 
-	model_ = std::make_unique<SpellModel>(device_, "models/viking_room.obj");
-	texture_ = std::make_unique<SpellTexture>(device_, "textures/viking_room.png");
+	resources_.loadInitialResources();
 
 	createUniformBuffers();
 	createDescriptorPool();
@@ -162,8 +160,8 @@ void SpellApp::createDescriptorSets() {
 
 		VkDescriptorImageInfo imageInfo{};
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = texture_->getImageView();
-		imageInfo.sampler = texture_->getSampler();
+		imageInfo.imageView = resources_.texture()->getImageView();
+		imageInfo.sampler = resources_.texture()->getSampler();
 
 		std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -217,6 +215,12 @@ void SpellApp::updateUniformBuffer(int frameIndex) {
 }
 
 void SpellApp::renderFrame() {
+	if (needReload_) {
+		resources_.reloadResources();
+		rebuildDescriptors();
+		needReload_ = false;
+	}
+
 	auto commandBuffer = renderer_.beginFrame();
 	if (commandBuffer == nullptr) return;
 
@@ -229,12 +233,12 @@ void SpellApp::renderFrame() {
 		0, sizeof(LightPushConstantData), &lightData_);
 
 	pipeline_->bind(commandBuffer);
-	model_->bind(commandBuffer);
+	resources_.model()->bind(commandBuffer);
 
 	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
 		pipelineLayout_, 0, 1, &descriptorSets_[frameIndex], 0, nullptr);
 
-	model_->draw(commandBuffer);
+	resources_.model()->draw(commandBuffer);
 
 	// ImGui 绘制（在同一个 RenderPass 内，场景之后）
 	imgui_->newFrame();
@@ -246,16 +250,17 @@ void SpellApp::renderFrame() {
 }
 
 void SpellApp::drawImGuiPanels() {
-	ImGui::Begin("Spell Engine");
+	if (inspector_.draw(resources_, lightData_)) {
+		needReload_ = true;
+	}
+}
 
-	ImGui::Text("FPS: %.1f (%.3f ms/frame)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
-	ImGui::Separator();
+void SpellApp::rebuildDescriptors() {
+	vkDestroyDescriptorPool(device_.device(), descriptorPool_, nullptr);
+	descriptorSets_.clear();
 
-	ImGui::Text("Light");
-	ImGui::ColorEdit3("Color", &lightData_.color.x);
-	ImGui::DragFloat3("Light Position", &lightData_.position.x, 0.1f, -10.0f, 10.0f);
-
-	ImGui::End();
+	createDescriptorPool();
+	createDescriptorSets();
 }
 
 } // namespace Spell
