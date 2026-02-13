@@ -6,6 +6,16 @@
 
 namespace Spell {
 
+// Pre-decoded image data from CPU-side stbi_load (thread-safe, no Vulkan calls)
+struct DecodedImageData {
+	unsigned char* pixels = nullptr;
+	int width = 0;
+	int height = 0;
+	VkDeviceSize imageSize = 0;
+	bool valid = false;
+	std::string sourcePath;
+};
+
 class SpellTexture {
 public:
 	// Deferred mode: prepares CPU-side data and GPU image, but does NOT submit GPU commands.
@@ -14,6 +24,10 @@ public:
 	SpellTexture(SpellDevice& device, const std::string& texturePath, bool srgb, bool deferred);
 	SpellTexture(SpellDevice& device, bool srgb, bool deferred);
 	SpellTexture(SpellDevice& device, bool srgb, bool deferred, unsigned char r, unsigned char g, unsigned char b, unsigned char a);
+
+	// Deferred mode: accepts pre-decoded pixel data (from parallel CPU decode)
+	// Caller is responsible for stbi_image_free(pixels) after this constructor returns.
+	SpellTexture(SpellDevice& device, const DecodedImageData& decoded, bool srgb, bool deferred);
 
 	// Legacy immediate mode constructors (kept for compatibility)
 	SpellTexture(SpellDevice& device, const std::string& texturePath, bool srgb = true);
@@ -42,6 +56,7 @@ public:
 
 private:
 	void prepareTextureImage(const std::string& texturePath);
+	void prepareFromDecodedData(const DecodedImageData& decoded);
 	void prepareFallbackTextureImage();
 	void prepareCustomColorImage(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 

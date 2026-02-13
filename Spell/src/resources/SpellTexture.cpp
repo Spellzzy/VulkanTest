@@ -56,6 +56,26 @@ SpellTexture::SpellTexture(SpellDevice& device, bool srgb, bool deferred, unsign
 }
 
 // ============================================================
+// Deferred mode constructor with pre-decoded pixel data
+// ============================================================
+
+SpellTexture::SpellTexture(SpellDevice& device, const DecodedImageData& decoded, bool srgb, bool deferred)
+	: device_(device), srgb_(srgb), deferred_(deferred) {
+	prepareFromDecodedData(decoded);
+	createTextureImageView();
+	createTextureSampler();
+	if (!deferred_) {
+		VkCommandBuffer cmd = device_.beginSingleTimeCommands();
+		recordUpload(cmd);
+		if (needsMipmaps_) {
+			recordMipmaps(cmd);
+		}
+		device_.endSingleTimeCommands(cmd);
+		finalizeStagingCleanup();
+	}
+}
+
+// ============================================================
 // Legacy immediate mode constructors
 // ============================================================
 
@@ -107,6 +127,29 @@ void SpellTexture::prepareTextureImage(const std::string& texturePath) {
 	vkUnmapMemory(device_.device(), stagingBufferMemory_);
 
 	stbi_image_free(pixels);
+
+	device_.createImage(texWidth_, texHeight_, mipLevels_, VK_SAMPLE_COUNT_1_BIT, format,
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage_, textureImageMemory_);
+}
+
+void SpellTexture::prepareFromDecodedData(const DecodedImageData& decoded) {
+	texWidth_ = decoded.width;
+	texHeight_ = decoded.height;
+
+	mipLevels_ = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth_, texHeight_)))) + 1;
+	needsMipmaps_ = (mipLevels_ > 1);
+	VkFormat format = getFormat();
+
+	device_.createBuffer(decoded.imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		stagingBuffer_, stagingBufferMemory_);
+
+	void* data;
+	vkMapMemory(device_.device(), stagingBufferMemory_, 0, decoded.imageSize, 0, &data);
+	memcpy(data, decoded.pixels, static_cast<size_t>(decoded.imageSize));
+	vkUnmapMemory(device_.device(), stagingBufferMemory_);
 
 	device_.createImage(texWidth_, texHeight_, mipLevels_, VK_SAMPLE_COUNT_1_BIT, format,
 		VK_IMAGE_TILING_OPTIMAL,
