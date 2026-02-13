@@ -59,14 +59,28 @@ void SpellApp::createDescriptorSetLayout() {
 	VkDescriptorSetLayoutBinding samplerLayoutBinding{};
 	samplerLayoutBinding.binding = 1;
 	samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	samplerLayoutBinding.descriptorCount = 1;
+	samplerLayoutBinding.descriptorCount = MAX_BINDLESS_TEXTURES;
 	samplerLayoutBinding.pImmutableSamplers = nullptr;
 	samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
 	std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
 
+	// Binding flags for bindless
+	std::array<VkDescriptorBindingFlags, 2> bindingFlags{};
+	bindingFlags[0] = 0; // UBO: no special flags
+	bindingFlags[1] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
+		| VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT
+		| VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
+
+	VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo{};
+	bindingFlagsInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+	bindingFlagsInfo.bindingCount = static_cast<uint32_t>(bindingFlags.size());
+	bindingFlagsInfo.pBindingFlags = bindingFlags.data();
+
 	VkDescriptorSetLayoutCreateInfo layoutInfo{};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layoutInfo.pNext = &bindingFlagsInfo;
+	layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
 	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 	layoutInfo.pBindings = bindings.data();
 
@@ -124,10 +138,11 @@ void SpellApp::createDescriptorPool() {
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	poolSizes[0].descriptorCount = static_cast<uint32_t>(imageCount);
 	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[1].descriptorCount = static_cast<uint32_t>(imageCount);
+	poolSizes[1].descriptorCount = MAX_BINDLESS_TEXTURES * static_cast<uint32_t>(imageCount);
 
 	VkDescriptorPoolCreateInfo poolInfo{};
 	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
 	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 	poolInfo.pPoolSizes = poolSizes.data();
 	poolInfo.maxSets = static_cast<uint32_t>(imageCount);
@@ -139,10 +154,22 @@ void SpellApp::createDescriptorPool() {
 
 void SpellApp::createDescriptorSets() {
 	size_t imageCount = renderer_.getSwapChainImageCount();
+	uint32_t actualTextureCount = resources_.textureCount();
+	if (actualTextureCount == 0) actualTextureCount = 1;
 
 	std::vector<VkDescriptorSetLayout> layouts(imageCount, descriptorSetLayout_);
+
+	// Variable descriptor count for the last binding (bindless textures)
+	std::vector<uint32_t> variableCounts(imageCount, actualTextureCount);
+
+	VkDescriptorSetVariableDescriptorCountAllocateInfo variableCountInfo{};
+	variableCountInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
+	variableCountInfo.descriptorSetCount = static_cast<uint32_t>(imageCount);
+	variableCountInfo.pDescriptorCounts = variableCounts.data();
+
 	VkDescriptorSetAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.pNext = &variableCountInfo;
 	allocInfo.descriptorPool = descriptorPool_;
 	allocInfo.descriptorSetCount = static_cast<uint32_t>(imageCount);
 	allocInfo.pSetLayouts = layouts.data();
@@ -153,33 +180,39 @@ void SpellApp::createDescriptorSets() {
 	}
 
 	for (size_t i = 0; i < imageCount; i++) {
+		// UBO write
 		VkDescriptorBufferInfo bufferInfo{};
 		bufferInfo.buffer = uniformBuffers_[i];
 		bufferInfo.offset = 0;
 		bufferInfo.range = sizeof(UniformBufferObject);
 
-		VkDescriptorImageInfo imageInfo{};
-		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = resources_.texture()->getImageView();
-		imageInfo.sampler = resources_.texture()->getSampler();
+		VkWriteDescriptorSet uboWrite{};
+		uboWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		uboWrite.dstSet = descriptorSets_[i];
+		uboWrite.dstBinding = 0;
+		uboWrite.dstArrayElement = 0;
+		uboWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboWrite.descriptorCount = 1;
+		uboWrite.pBufferInfo = &bufferInfo;
 
-		std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
-		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[0].dstSet = descriptorSets_[i];
-		descriptorWrites[0].dstBinding = 0;
-		descriptorWrites[0].dstArrayElement = 0;
-		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[0].descriptorCount = 1;
-		descriptorWrites[0].pBufferInfo = &bufferInfo;
+		// Bindless texture array write
+		std::vector<VkDescriptorImageInfo> imageInfos(actualTextureCount);
+		for (uint32_t t = 0; t < actualTextureCount; t++) {
+			imageInfos[t].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imageInfos[t].imageView = resources_.textures()[t]->getImageView();
+			imageInfos[t].sampler = resources_.textures()[t]->getSampler();
+		}
 
-		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[1].dstSet = descriptorSets_[i];
-		descriptorWrites[1].dstBinding = 1;
-		descriptorWrites[1].dstArrayElement = 0;
-		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[1].descriptorCount = 1;
-		descriptorWrites[1].pImageInfo = &imageInfo;
+		VkWriteDescriptorSet textureWrite{};
+		textureWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		textureWrite.dstSet = descriptorSets_[i];
+		textureWrite.dstBinding = 1;
+		textureWrite.dstArrayElement = 0;
+		textureWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		textureWrite.descriptorCount = actualTextureCount;
+		textureWrite.pImageInfo = imageInfos.data();
 
+		std::array<VkWriteDescriptorSet, 2> descriptorWrites = { uboWrite, textureWrite };
 		vkUpdateDescriptorSets(device_.device(), static_cast<uint32_t>(descriptorWrites.size()),
 			descriptorWrites.data(), 0, nullptr);
 	}
@@ -240,7 +273,6 @@ void SpellApp::renderFrame() {
 
 	resources_.model()->draw(commandBuffer);
 
-	// ImGui 绘制（在同一个 RenderPass 内，场景之后）
 	imgui_->newFrame();
 	drawImGuiPanels();
 	imgui_->render(commandBuffer);

@@ -15,6 +15,13 @@ SpellTexture::SpellTexture(SpellDevice& device, const std::string& texturePath)
 	createTextureSampler();
 }
 
+SpellTexture::SpellTexture(SpellDevice& device)
+	: device_(device) {
+	createWhiteTextureImage();
+	createTextureImageView();
+	createTextureSampler();
+}
+
 SpellTexture::~SpellTexture() {
 	vkDestroySampler(device_.device(), textureSampler_, nullptr);
 	vkDestroyImageView(device_.device(), textureImageView_, nullptr);
@@ -61,6 +68,40 @@ void SpellTexture::createTextureImage(const std::string& texturePath) {
 	vkFreeMemory(device_.device(), stagingBufferMemory, nullptr);
 
 	generateMipmaps(textureImage_, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, mipLevels_);
+}
+
+void SpellTexture::createWhiteTextureImage() {
+	mipLevels_ = 1;
+	const uint32_t texWidth = 1, texHeight = 1;
+	const unsigned char whitePixel[4] = { 255, 255, 255, 255 };
+	VkDeviceSize imageSize = 4;
+
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	device_.createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		stagingBuffer, stagingBufferMemory);
+
+	void* data;
+	vkMapMemory(device_.device(), stagingBufferMemory, 0, imageSize, 0, &data);
+	memcpy(data, whitePixel, imageSize);
+	vkUnmapMemory(device_.device(), stagingBufferMemory);
+
+	device_.createImage(texWidth, texHeight, mipLevels_, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB,
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage_, textureImageMemory_);
+
+	device_.transitionImageLayout(textureImage_, VK_FORMAT_R8G8B8A8_SRGB,
+		VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels_);
+
+	device_.copyBufferToImage(stagingBuffer, textureImage_, texWidth, texHeight);
+
+	device_.transitionImageLayout(textureImage_, VK_FORMAT_R8G8B8A8_SRGB,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels_);
+
+	vkDestroyBuffer(device_.device(), stagingBuffer, nullptr);
+	vkFreeMemory(device_.device(), stagingBufferMemory, nullptr);
 }
 
 void SpellTexture::createTextureImageView() {

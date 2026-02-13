@@ -9,6 +9,8 @@
 
 namespace Spell {
 
+static constexpr uint32_t MAX_BINDLESS_TEXTURES = 128;
+
 class SpellResourceManager {
 public:
 	SpellResourceManager(SpellDevice& device);
@@ -24,12 +26,21 @@ public:
 	const std::vector<std::string>& availableTextures() const { return availableTextures_; }
 
 	SpellModel* model() const { return model_.get(); }
-	SpellTexture* texture() const { return texture_.get(); }
+
+	// Bindless texture array: index 0 is fallback white, index 1..N are material textures
+	const std::vector<std::unique_ptr<SpellTexture>>& textures() const { return textures_; }
+	uint32_t textureCount() const { return static_cast<uint32_t>(textures_.size()); }
+
+	// Legacy single texture access (for inspector display)
+	SpellTexture* texture() const { return textures_.empty() ? nullptr : textures_[0].get(); }
 
 	void loadInitialResources();
 	void reloadResources();
 
 private:
+	void createFallbackWhiteTexture();
+	void loadMaterialTextures();
+
 	SpellDevice& device_;
 
 	std::string modelPath_{ "models/viking_room.obj" };
@@ -38,7 +49,7 @@ private:
 	std::vector<std::string> availableTextures_;
 
 	std::unique_ptr<SpellModel> model_;
-	std::unique_ptr<SpellTexture> texture_;
+	std::vector<std::unique_ptr<SpellTexture>> textures_; // [0] = fallback, [1..N] = material textures
 };
 
 } // namespace Spell

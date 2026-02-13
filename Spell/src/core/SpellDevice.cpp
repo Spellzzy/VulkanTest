@@ -32,7 +32,7 @@ void SpellDevice::createInstance() {
 	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 	appInfo.pEngineName = "Spell";
 	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.apiVersion = VK_API_VERSION_1_0;
+	appInfo.apiVersion = VK_API_VERSION_1_2;
 
 	VkInstanceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -113,8 +113,27 @@ void SpellDevice::createLogicalDevice() {
 	vkGetPhysicalDeviceFeatures(physicalDevice_, &deviceFeatures_);
 	deviceFeatures_.sampleRateShading = VK_TRUE;
 
+	// Query descriptor indexing features
+	descriptorIndexingFeatures_.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+	descriptorIndexingFeatures_.pNext = nullptr;
+
+	VkPhysicalDeviceFeatures2 physicalDeviceFeatures2{};
+	physicalDeviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	physicalDeviceFeatures2.pNext = &descriptorIndexingFeatures_;
+	vkGetPhysicalDeviceFeatures2(physicalDevice_, &physicalDeviceFeatures2);
+
+	// Enable the descriptor indexing features we need
+	VkPhysicalDeviceDescriptorIndexingFeatures enabledIndexingFeatures{};
+	enabledIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+	enabledIndexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+	enabledIndexingFeatures.runtimeDescriptorArray = VK_TRUE;
+	enabledIndexingFeatures.descriptorBindingVariableDescriptorCount = VK_TRUE;
+	enabledIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
+	enabledIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+
 	VkDeviceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	createInfo.pNext = &enabledIndexingFeatures;
 	createInfo.pQueueCreateInfos = queueCreateInfos.data();
 	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 	createInfo.pEnabledFeatures = &deviceFeatures_;

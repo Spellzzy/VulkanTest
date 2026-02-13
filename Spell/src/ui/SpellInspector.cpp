@@ -37,21 +37,28 @@ bool SpellInspector::draw(SpellResourceManager& resources, LightPushConstantData
 	if (resources.model()) {
 		ImGui::Text("  Vertices: %u  Indices: %u",
 			resources.model()->getVertexCount(), resources.model()->getIndexCount());
+		ImGui::Text("  Materials: %u  Textures: %u",
+			static_cast<uint32_t>(resources.model()->getMaterials().size()),
+			resources.textureCount());
 	}
 
-	// Texture selector
+	// Fallback texture selector (used when model has no materials)
+	bool hasMaterials = resources.model() && !resources.model()->getMaterials().empty();
 	auto texGetter = [](void* data, int idx, const char** out_text) -> bool {
 		auto& textures = *static_cast<const std::vector<std::string>*>(data);
 		if (idx < 0 || idx >= static_cast<int>(textures.size())) return false;
 		*out_text = textures[idx].c_str();
 		return true;
 	};
-	ImGui::Combo("Texture", &selectedTextureIdx_, texGetter,
+	if (hasMaterials) {
+		ImGui::BeginDisabled();
+	}
+	ImGui::Combo("Fallback Tex", &selectedTextureIdx_, texGetter,
 		const_cast<void*>(static_cast<const void*>(&availableTextures)),
 		static_cast<int>(availableTextures.size()));
-
-	if (resources.texture()) {
-		ImGui::Text("  Mip Levels: %u", resources.texture()->getMipLevels());
+	if (hasMaterials) {
+		ImGui::EndDisabled();
+		ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "(model uses .mtl textures)");
 	}
 
 	ImGui::Spacing();
@@ -80,6 +87,17 @@ bool SpellInspector::draw(SpellResourceManager& resources, LightPushConstantData
 	if (ImGui::Button("Refresh File List")) {
 		resources.scanAvailableFiles();
 		syncSelection(resources);
+	}
+
+	// Material texture info
+	if (resources.model() && !resources.model()->getMaterials().empty()) {
+		ImGui::Separator();
+		ImGui::Text("Material Textures (auto-loaded from .mtl):");
+		const auto& mats = resources.model()->getMaterials();
+		for (size_t i = 0; i < mats.size(); i++) {
+			ImGui::Text("  [%zu] %s", i,
+				mats[i].diffuseTexturePath.empty() ? "(no texture)" : mats[i].diffuseTexturePath.c_str());
+		}
 	}
 
 	ImGui::End();

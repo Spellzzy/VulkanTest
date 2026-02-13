@@ -85,6 +85,7 @@ private:
 	VkDevice device_;
 	VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;
 	VkPhysicalDeviceFeatures deviceFeatures_{};
+	VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures_{};
 	VkSurfaceKHR surface_;
 	VkCommandPool commandPool_;
 	VkQueue graphicsQueue_;

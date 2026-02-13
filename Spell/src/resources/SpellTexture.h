@@ -8,6 +8,7 @@ namespace Spell {
 class SpellTexture {
 public:
 	SpellTexture(SpellDevice& device, const std::string& texturePath);
+	SpellTexture(SpellDevice& device); // creates 1x1 white fallback texture
 	~SpellTexture();
 
 	SpellTexture(const SpellTexture&) = delete;
@@ -19,6 +20,7 @@ public:
 
 private:
 	void createTextureImage(const std::string& texturePath);
+	void createWhiteTextureImage();
 	void createTextureImageView();
 	void createTextureSampler();
 	void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);

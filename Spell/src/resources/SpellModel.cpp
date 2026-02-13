@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <cstring>
+#include <filesystem>
 
 namespace Spell {
 
@@ -28,43 +29,78 @@ void SpellModel::loadModel(const std::string& filepath) {
 	std::vector<tinyobj::material_t> materials;
 	std::string warn, err;
 
-	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filepath.c_str())) {
+	std::string mtlBaseDir = std::filesystem::path(filepath).parent_path().string();
+	if (mtlBaseDir.empty()) mtlBaseDir = ".";
+	mtlBaseDir += "/";
+
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filepath.c_str(), mtlBaseDir.c_str())) {
 		throw std::runtime_error(warn + err);
+	}
+
+	// Build material info list
+	materials_.clear();
+	for (const auto& mat : materials) {
+		MaterialInfo info{};
+		if (!mat.diffuse_texname.empty()) {
+			info.diffuseTexturePath = mtlBaseDir + mat.diffuse_texname;
+		}
+		materials_.push_back(info);
+	}
+
+	std::cout << "[Spell] Loaded " << materials_.size() << " material(s) from " << filepath << std::endl;
+	for (size_t i = 0; i < materials_.size(); i++) {
+		std::cout << "  [" << i << "] diffuse: "
+			<< (materials_[i].diffuseTexturePath.empty() ? "(none)" : materials_[i].diffuseTexturePath) << std::endl;
 	}
 
 	std::unordered_map<Vertex, uint32_t> uniqueVertices{};
 	for (const auto& shape : shapes) {
-		for (const auto& index : shape.mesh.indices) {
-			Vertex vertex{};
+		size_t indexOffset = 0;
+		for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
+			int faceVerts = shape.mesh.num_face_vertices[f];
+			int matId = -1;
+			if (f < shape.mesh.material_ids.size()) {
+				matId = shape.mesh.material_ids[f];
+			}
+			// materialIndex: -1 means no material, use fallback (index 0 in texture array)
+			int materialIndex = (matId >= 0 && matId < static_cast<int>(materials_.size())) ? matId : -1;
 
-			vertex.pos = {
-				attrib.vertices[3 * index.vertex_index + 0],
-				attrib.vertices[3 * index.vertex_index + 1],
-				attrib.vertices[3 * index.vertex_index + 2]
-			};
+			for (int v = 0; v < faceVerts; v++) {
+				const auto& index = shape.mesh.indices[indexOffset + v];
+				Vertex vertex{};
 
-			if (index.texcoord_index >= 0) {
-				vertex.texCoord = {
-					attrib.texcoords[2 * index.texcoord_index + 0],
-					1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+				vertex.pos = {
+					attrib.vertices[3 * index.vertex_index + 0],
+					attrib.vertices[3 * index.vertex_index + 1],
+					attrib.vertices[3 * index.vertex_index + 2]
 				};
-			}
 
-			vertex.color = { 1.0f, 1.0f, 1.0f };
+				if (index.texcoord_index >= 0) {
+					vertex.texCoord = {
+						attrib.texcoords[2 * index.texcoord_index + 0],
+						1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+					};
+				}
 
-			if (index.normal_index >= 0) {
-				vertex.normal = {
-					attrib.normals[3 * index.normal_index + 0],
-					attrib.normals[3 * index.normal_index + 1],
-					attrib.normals[3 * index.normal_index + 2]
-				};
-			}
+				vertex.color = { 1.0f, 1.0f, 1.0f };
 
-			if (uniqueVertices.count(vertex) == 0) {
-				uniqueVertices[vertex] = static_cast<uint32_t>(vertices_.size());
-				vertices_.push_back(vertex);
+				if (index.normal_index >= 0) {
+					vertex.normal = {
+						attrib.normals[3 * index.normal_index + 0],
+						attrib.normals[3 * index.normal_index + 1],
+						attrib.normals[3 * index.normal_index + 2]
+					};
+				}
+
+				vertex.materialIndex = materialIndex;
+
+				if (uniqueVertices.count(vertex) == 0) {
+					uniqueVertices[vertex] = static_cast<uint32_t>(vertices_.size());
+					vertices_.push_back(vertex);
+				}
+				indices_.push_back(uniqueVertices[vertex]);
 			}
-			indices_.push_back(uniqueVertices[vertex]);
+			indexOffset += faceVerts;
 		}
 	}
 }

@@ -25,3 +25,15 @@ ipch/
 
 # SPIR-V 编译产物（可从 .vert/.frag 重新编译）
 *.spv
+
+# 纹理资源（体积大，不上传）
+Spell/textures/
+
+# 模型资源（体积大，不上传）
+Spell/models/
+
+# 材质文件
+*.mtl
+
+# PowerShell 误生成
+$null
