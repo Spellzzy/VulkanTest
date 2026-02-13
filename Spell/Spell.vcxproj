@@ -144,26 +144,25 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="$(IMGUI_DIR)\imgui.cpp" />
-    <ClCompile Include="$(IMGUI_DIR)\imgui_demo.cpp" />
-    <ClCompile Include="$(IMGUI_DIR)\imgui_draw.cpp" />
-    <ClCompile Include="$(IMGUI_DIR)\imgui_tables.cpp" />
-    <ClCompile Include="$(IMGUI_DIR)\imgui_widgets.cpp" />
-    <ClCompile Include="$(IMGUI_DIR)\backends\imgui_impl_glfw.cpp" />
-    <ClCompile Include="$(IMGUI_DIR)\backends\imgui_impl_vulkan.cpp" />
-    <ClCompile Include="UIFrame.cpp" />
-    <ClCompile Include="Spell.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\SpellApp.cpp" />
+    <ClCompile Include="src\core\SpellWindow.cpp" />
+    <ClCompile Include="src\core\SpellDevice.cpp" />
+    <ClCompile Include="src\core\SpellSwapChain.cpp" />
+    <ClCompile Include="src\renderer\SpellPipeline.cpp" />
+    <ClCompile Include="src\renderer\SpellRenderer.cpp" />
+    <ClCompile Include="src\resources\SpellModel.cpp" />
+    <ClCompile Include="src\resources\SpellTexture.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(IMGUI_DIR)\imconfig.h" />
-    <ClInclude Include="$(IMGUI_DIR)\imgui.h" />
-    <ClInclude Include="$(IMGUI_DIR)\imgui_internal.h" />
-    <ClInclude Include="$(IMGUI_DIR)\imstb_rectpack.h" />
-    <ClInclude Include="$(IMGUI_DIR)\imstb_textedit.h" />
-    <ClInclude Include="$(IMGUI_DIR)\imstb_truetype.h" />
-    <ClInclude Include="$(IMGUI_DIR)\backends\imgui_impl_glfw.h" />
-    <ClInclude Include="$(IMGUI_DIR)\backends\imgui_impl_vulkan.h" />
-    <ClInclude Include="UIFrame.h" />
+    <ClInclude Include="src\SpellApp.h" />
+    <ClInclude Include="src\core\SpellWindow.h" />
+    <ClInclude Include="src\core\SpellDevice.h" />
+    <ClInclude Include="src\core\SpellSwapChain.h" />
+    <ClInclude Include="src\renderer\SpellPipeline.h" />
+    <ClInclude Include="src\renderer\SpellRenderer.h" />
+    <ClInclude Include="src\resources\SpellModel.h" />
+    <ClInclude Include="src\resources\SpellTexture.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

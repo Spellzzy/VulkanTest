@@ -22,6 +22,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>
+        $(ProjectDir)src;
         $(VULKAN_SDK)\Include;
         $(GLFW_DIR)\include;
         $(GLM_DIR);
