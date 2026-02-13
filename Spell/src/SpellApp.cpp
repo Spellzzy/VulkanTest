@@ -325,6 +325,9 @@ void SpellApp::renderFrame() {
 	int frameIndex = renderer_.getFrameIndex();
 	updateUniformBuffer(frameIndex);
 
+	// Pipeline statistics query: reset must be outside render pass
+	vkCmdResetQueryPool(commandBuffer, statsQueryPool_, frameIndex, 1);
+
 	renderer_.beginRenderPass(commandBuffer);
 
 	vkCmdPushConstants(commandBuffer, pipelineLayout_, VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -342,8 +345,7 @@ void SpellApp::renderFrame() {
 	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
 		pipelineLayout_, 0, 1, &descriptorSets_[frameIndex], 0, nullptr);
 
-	// Pipeline statistics query: reset and begin
-	vkCmdResetQueryPool(commandBuffer, statsQueryPool_, frameIndex, 1);
+	// Begin query (inside render pass is fine)
 	vkCmdBeginQuery(commandBuffer, statsQueryPool_, frameIndex, 0);
 
 	resources_.model()->draw(commandBuffer);

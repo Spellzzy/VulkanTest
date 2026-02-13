@@ -56,9 +56,13 @@ SpellSwapChain::~SpellSwapChain() {
 
 	vkDestroyRenderPass(device_.device(), renderPass_, nullptr);
 
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-		vkDestroySemaphore(device_.device(), renderFinishedSemaphores_[i], nullptr);
+	for (size_t i = 0; i < imageAvailableSemaphores_.size(); i++) {
 		vkDestroySemaphore(device_.device(), imageAvailableSemaphores_[i], nullptr);
+	}
+	for (size_t i = 0; i < renderFinishedSemaphores_.size(); i++) {
+		vkDestroySemaphore(device_.device(), renderFinishedSemaphores_[i], nullptr);
+	}
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
 		vkDestroyFence(device_.device(), inFlightFences_[i], nullptr);
 	}
 }
@@ -243,8 +247,8 @@ void SpellSwapChain::createFramebuffers() {
 }
 
 void SpellSwapChain::createSyncObjects() {
-	imageAvailableSemaphores_.resize(MAX_FRAMES_IN_FLIGHT);
-	renderFinishedSemaphores_.resize(MAX_FRAMES_IN_FLIGHT);
+	imageAvailableSemaphores_.resize(imageCount());
+	renderFinishedSemaphores_.resize(imageCount());
 	inFlightFences_.resize(MAX_FRAMES_IN_FLIGHT);
 	imagesInFlight_.resize(imageCount(), VK_NULL_HANDLE);
 
@@ -255,10 +259,14 @@ void SpellSwapChain::createSyncObjects() {
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+	for (size_t i = 0; i < imageCount(); i++) {
 		if (vkCreateSemaphore(device_.device(), &semaphoreInfo, nullptr, &imageAvailableSemaphores_[i]) != VK_SUCCESS ||
-			vkCreateSemaphore(device_.device(), &semaphoreInfo, nullptr, &renderFinishedSemaphores_[i]) != VK_SUCCESS ||
-			vkCreateFence(device_.device(), &fenceInfo, nullptr, &inFlightFences_[i]) != VK_SUCCESS) {
+			vkCreateSemaphore(device_.device(), &semaphoreInfo, nullptr, &renderFinishedSemaphores_[i]) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create synchronization objects!");
+		}
+	}
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		if (vkCreateFence(device_.device(), &fenceInfo, nullptr, &inFlightFences_[i]) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create synchronization objects!");
 		}
 	}
@@ -266,9 +274,18 @@ void SpellSwapChain::createSyncObjects() {
 
 VkResult SpellSwapChain::acquireNextImage(uint32_t* imageIndex) {
 	vkWaitForFences(device_.device(), 1, &inFlightFences_[currentFrame_], VK_TRUE, UINT64_MAX);
+
+	// Use a rotating index for imageAvailable semaphores to avoid reuse conflicts.
+	// We pick the semaphore based on acquireIndex_ which cycles through all swapchain images.
+	uint32_t semaphoreIndex = acquireIndex_;
+	acquireIndex_ = (acquireIndex_ + 1) % static_cast<uint32_t>(imageCount());
+
 	VkResult result = vkAcquireNextImageKHR(
 		device_.device(), swapChain_, UINT64_MAX,
-		imageAvailableSemaphores_[currentFrame_], VK_NULL_HANDLE, imageIndex);
+		imageAvailableSemaphores_[semaphoreIndex], VK_NULL_HANDLE, imageIndex);
+
+	// Store which semaphore was used for this image so submitCommandBuffers can wait on it
+	currentAcquireSemaphore_ = semaphoreIndex;
 	return result;
 }
 
@@ -281,7 +298,7 @@ VkResult SpellSwapChain::submitCommandBuffers(const VkCommandBuffer* buffers, ui
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-	VkSemaphore waitSemaphores[] = { imageAvailableSemaphores_[currentFrame_] };
+	VkSemaphore waitSemaphores[] = { imageAvailableSemaphores_[currentAcquireSemaphore_] };
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = waitSemaphores;
@@ -289,7 +306,7 @@ VkResult SpellSwapChain::submitCommandBuffers(const VkCommandBuffer* buffers, ui
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = buffers;
 
-	VkSemaphore signalSemaphores[] = { renderFinishedSemaphores_[currentFrame_] };
+	VkSemaphore signalSemaphores[] = { renderFinishedSemaphores_[*imageIndex] };
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 

@@ -75,6 +75,8 @@ private:
 	std::vector<VkFence> inFlightFences_;
 	std::vector<VkFence> imagesInFlight_;
 	size_t currentFrame_ = 0;
+	uint32_t acquireIndex_ = 0;
+	uint32_t currentAcquireSemaphore_ = 0;
 
 	SpellDevice& device_;
 	VkExtent2D windowExtent_;
