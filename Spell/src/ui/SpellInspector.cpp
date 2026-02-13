@@ -14,7 +14,9 @@ bool SpellInspector::draw(SpellResourceManager& resources, LightPushConstantData
 	ImGui::Separator();
 
 	ImGui::Text("Light");
-	ImGui::ColorEdit3("Color", &light.color.x);
+	ImGui::ColorEdit3("Color", lightColor_);
+	ImGui::DragFloat("Intensity", &lightIntensity_, 0.1f, 0.0f, 100.0f);
+	light.color = glm::vec3(lightColor_[0], lightColor_[1], lightColor_[2]) * lightIntensity_;
 	ImGui::DragFloat3("Position", &light.position.x, 0.1f, -10.0f, 10.0f);
 
 	ImGui::Separator();

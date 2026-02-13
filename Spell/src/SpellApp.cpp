@@ -225,7 +225,7 @@ void SpellApp::updateUniformBuffer(int frameIndex) {
 
 	UniformBufferObject ubo{};
 	ubo.model = glm::rotate(
-		(glm::mat4(1.0f) * sin(time) * glm::mat4(0.5) + glm::mat4(0.5)),
+		glm::mat4(1.0f),
 		time * glm::radians(10.0f),
 		glm::vec3(0.0f, 0.0f, 1.0f));
 

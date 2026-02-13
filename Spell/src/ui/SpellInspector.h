@@ -13,6 +13,8 @@ public:
 private:
 	int selectedModelIdx_{ 0 };
 	int selectedTextureIdx_{ 0 };
+	float lightColor_[3]{ 1.0f, 0.92f, 0.9f };
+	float lightIntensity_{ 23.0f };
 
 	void syncSelection(const SpellResourceManager& resources);
 };

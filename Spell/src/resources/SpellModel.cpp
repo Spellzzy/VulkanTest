@@ -68,6 +68,8 @@ void SpellModel::loadModel(const std::string& filepath) {
 			<< (materials_[i].roughnessTexturePath.empty() ? "(none)" : materials_[i].roughnessTexturePath) << std::endl;
 	}
 
+	bool hasNormals = !attrib.normals.empty();
+
 	std::unordered_map<Vertex, uint32_t> uniqueVertices{};
 	for (const auto& shape : shapes) {
 		size_t indexOffset = 0;
@@ -79,6 +81,24 @@ void SpellModel::loadModel(const std::string& filepath) {
 			}
 			// materialIndex: -1 means no material, use fallback (index 0 in texture array)
 			int materialIndex = (matId >= 0 && matId < static_cast<int>(materials_.size())) ? matId : -1;
+
+			// Compute flat face normal if model has no normals
+			glm::vec3 faceNormal{0.0f, 0.0f, 1.0f};
+			if (!hasNormals && faceVerts >= 3) {
+				const auto& i0 = shape.mesh.indices[indexOffset + 0];
+				const auto& i1 = shape.mesh.indices[indexOffset + 1];
+				const auto& i2 = shape.mesh.indices[indexOffset + 2];
+				glm::vec3 p0 = {attrib.vertices[3*i0.vertex_index+0], attrib.vertices[3*i0.vertex_index+1], attrib.vertices[3*i0.vertex_index+2]};
+				glm::vec3 p1 = {attrib.vertices[3*i1.vertex_index+0], attrib.vertices[3*i1.vertex_index+1], attrib.vertices[3*i1.vertex_index+2]};
+				glm::vec3 p2 = {attrib.vertices[3*i2.vertex_index+0], attrib.vertices[3*i2.vertex_index+1], attrib.vertices[3*i2.vertex_index+2]};
+				glm::vec3 edge1 = p1 - p0;
+				glm::vec3 edge2 = p2 - p0;
+				glm::vec3 n = glm::cross(edge1, edge2);
+				float len = glm::length(n);
+				if (len > 1e-6f) {
+					faceNormal = n / len;
+				}
+			}
 
 			for (int v = 0; v < faceVerts; v++) {
 				const auto& index = shape.mesh.indices[indexOffset + v];
@@ -99,12 +119,14 @@ void SpellModel::loadModel(const std::string& filepath) {
 
 				vertex.color = { 1.0f, 1.0f, 1.0f };
 
-				if (index.normal_index >= 0) {
+				if (hasNormals && index.normal_index >= 0) {
 					vertex.normal = {
 						attrib.normals[3 * index.normal_index + 0],
 						attrib.normals[3 * index.normal_index + 1],
 						attrib.normals[3 * index.normal_index + 2]
 					};
+				} else {
+					vertex.normal = faceNormal;
 				}
 
 				vertex.materialIndex = materialIndex;
@@ -117,6 +139,10 @@ void SpellModel::loadModel(const std::string& filepath) {
 			}
 			indexOffset += faceVerts;
 		}
+	}
+
+	if (!hasNormals) {
+		std::cout << "[Spell] Model had no normals, computed flat face normals" << std::endl;
 	}
 }
 

@@ -78,7 +78,17 @@ void main() {
 	roughness = max(roughness, 0.04);
 
 	// Build TBN matrix from screen-space derivatives
-	vec3 N = normalize(fragNormalW);
+	vec3 N = fragNormalW;
+	float nLen = length(N);
+	if (nLen < 0.0001) {
+		// Fallback: derive normal from screen-space derivatives
+		vec3 fdx = dFdx(fragPositionW);
+		vec3 fdy = dFdy(fragPositionW);
+		N = normalize(cross(fdx, fdy));
+	} else {
+		N = N / nLen;
+	}
+
 	vec3 Q1 = dFdx(fragPositionW);
 	vec3 Q2 = dFdy(fragPositionW);
 	vec2 st1 = dFdx(fragTexCoord);
