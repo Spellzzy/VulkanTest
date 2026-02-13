@@ -98,7 +98,7 @@ void initImGUI(VkInstance instance, GLFWwindow* window,
 	wd->PresentMode = ImGui_ImplVulkanH_SelectPresentMode(physicalDevice, wd->Surface, &present_modes[0], IM_ARRAYSIZE(present_modes));
 
 	// Create SwapChain, RenderPass, Framebuffer, etc.
-	ImGui_ImplVulkanH_CreateOrResizeWindow(instance, physicalDevice, device, wd, g_QueueFamily, g_Allocator, w, h, g_MinImageCount);
+	ImGui_ImplVulkanH_CreateOrResizeWindow(instance, physicalDevice, device, wd, g_QueueFamily, g_Allocator, w, h, g_MinImageCount, 0);
 
 
 	IMGUI_CHECKVERSION();
@@ -123,12 +123,13 @@ void initImGUI(VkInstance instance, GLFWwindow* window,
 	init_info.Queue = queue;
 	init_info.PipelineCache = VK_NULL_HANDLE;
 	init_info.DescriptorPool = descriptorPool;
-	init_info.Subpass = 0;
 	init_info.MinImageCount = g_MinImageCount;
 	init_info.ImageCount = wd->ImageCount;
-	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 	init_info.Allocator = g_Allocator;
-	ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
+	init_info.PipelineInfoMain.RenderPass = wd->RenderPass;
+	init_info.PipelineInfoMain.Subpass = 0;
+	init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+	ImGui_ImplVulkan_Init(&init_info);
 
 
 	unsigned char* tex_pixels = NULL;

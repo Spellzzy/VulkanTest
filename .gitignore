@@ -1,0 +1,27 @@
+# Visual Studio 编译输出
+Debug/
+Release/
+x64/
+x86/
+*.exe
+*.ilk
+*.pdb
+*.obj
+*.log
+*.idb
+
+# Visual Studio 临时/缓存文件
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.tlog/
+
+# Visual Studio 编译中间文件
+*.iobj
+*.ipdb
+ipch/
+
+# SPIR-V 编译产物（可从 .vert/.frag 重新编译）
+*.spv

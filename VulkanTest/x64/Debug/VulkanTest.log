@@ -1,5 +1,0 @@
-﻿C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Microsoft\VC\v160\Microsoft.CppBuild.targets(491,5): warning MSB8028: 中间目录(x64\Debug\)包含从另一个项目(Project1.vcxproj)共享的文件。   这会导致错误的清除和重新生成行为。
-  UIFrame.cpp
-  VulkanTest.cpp
-  正在生成代码...
-  VulkanTest.vcxproj -> C:\Users\Admim\source\repos\VulkanTest\x64\Debug\VulkanTest.exe

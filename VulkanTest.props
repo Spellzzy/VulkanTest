@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  
+  <!-- 用户宏定义 - 通过环境变量配置 -->
+  <PropertyGroup Label="UserMacros">
+    <!-- Vulkan SDK (安装后自动设置) -->
+    <VULKAN_SDK Condition="'$(VULKAN_SDK)' == ''">C:\VulkanSDK\1.4.341.0</VULKAN_SDK>
+    
+    <!-- 第三方库根目录 (需要设置环境变量 DEV_LIBS 或直接修改这里) -->
+    <DEV_LIBS Condition="'$(DEV_LIBS)' == ''">E:\DevLibs</DEV_LIBS>
+    
+    <!-- 各库路径 -->
+    <GLFW_DIR>$(DEV_LIBS)\glfw</GLFW_DIR>
+    <GLM_DIR>$(DEV_LIBS)\glm</GLM_DIR>
+    <STB_DIR>$(DEV_LIBS)\stb</STB_DIR>
+    <TINYOBJ_DIR>$(DEV_LIBS)\tinyobjloader</TINYOBJ_DIR>
+    <IMGUI_DIR>$(DEV_LIBS)\imgui</IMGUI_DIR>
+  </PropertyGroup>
+  
+  <!-- 编译配置 -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>
+        $(VULKAN_SDK)\Include;
+        $(GLFW_DIR)\include;
+        $(GLM_DIR);
+        $(STB_DIR);
+        $(TINYOBJ_DIR);
+        $(IMGUI_DIR);
+        $(IMGUI_DIR)\backends;
+        %(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>
+        $(VULKAN_SDK)\Lib;
+        $(GLFW_DIR)\lib-vc2019;
+        %(AdditionalLibraryDirectories)
+      </AdditionalLibraryDirectories>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>
