@@ -48,6 +48,7 @@ public:
 private:
 	void createFallbackWhiteTexture();
 	void loadMaterialTextures();
+	void submitBatchedTextureUpload();
 
 	SpellDevice& device_;
 

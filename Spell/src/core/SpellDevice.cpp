@@ -436,7 +436,11 @@ void SpellDevice::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSiz
 
 void SpellDevice::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
 	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+	cmdCopyBufferToImage(commandBuffer, buffer, image, width, height);
+	endSingleTimeCommands(commandBuffer);
+}
 
+void SpellDevice::cmdCopyBufferToImage(VkCommandBuffer cmd, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
 	VkBufferImageCopy region{};
 	region.bufferOffset = 0;
 	region.bufferRowLength = 0;
@@ -448,14 +452,16 @@ void SpellDevice::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t wid
 	region.imageOffset = { 0, 0, 0 };
 	region.imageExtent = { width, height, 1 };
 
-	vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-	endSingleTimeCommands(commandBuffer);
+	vkCmdCopyBufferToImage(cmd, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
 void SpellDevice::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels) {
 	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+	cmdTransitionImageLayout(commandBuffer, image, format, oldLayout, newLayout, mipLevels);
+	endSingleTimeCommands(commandBuffer);
+}
 
+void SpellDevice::cmdTransitionImageLayout(VkCommandBuffer cmd, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels) {
 	VkPipelineStageFlags sourceStage;
 	VkPipelineStageFlags destinationStage;
 
@@ -502,14 +508,12 @@ void SpellDevice::transitionImageLayout(VkImage image, VkFormat format, VkImageL
 		throw std::invalid_argument("unsupported layout transition!");
 	}
 
-	vkCmdPipelineBarrier(commandBuffer,
+	vkCmdPipelineBarrier(cmd,
 		sourceStage, destinationStage,
 		0,
 		0, nullptr,
 		0, nullptr,
 		1, &barrier);
-
-	endSingleTimeCommands(commandBuffer);
 }
 
 } // namespace Spell
