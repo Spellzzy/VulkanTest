@@ -70,7 +70,16 @@ void SpellModel::loadModel(const std::string& filepath) {
 
 	bool hasNormals = !attrib.normals.empty();
 
-	std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+	// Pre-count total indices for reserve
+	size_t totalIndices = 0;
+	for (const auto& shape : shapes) {
+		totalIndices += shape.mesh.indices.size();
+	}
+	vertices_.reserve(totalIndices / 3);
+	indices_.reserve(totalIndices);
+
+	robin_hood::unordered_map<Vertex, uint32_t, std::hash<Vertex>> uniqueVertices{};
+	uniqueVertices.reserve(totalIndices);
 	for (const auto& shape : shapes) {
 		size_t indexOffset = 0;
 		for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) {
@@ -131,11 +140,11 @@ void SpellModel::loadModel(const std::string& filepath) {
 
 				vertex.materialIndex = materialIndex;
 
-				if (uniqueVertices.count(vertex) == 0) {
-					uniqueVertices[vertex] = static_cast<uint32_t>(vertices_.size());
+				auto [it, inserted] = uniqueVertices.try_emplace(vertex, static_cast<uint32_t>(vertices_.size()));
+				if (inserted) {
 					vertices_.push_back(vertex);
 				}
-				indices_.push_back(uniqueVertices[vertex]);
+				indices_.push_back(it->second);
 			}
 			indexOffset += faceVerts;
 		}

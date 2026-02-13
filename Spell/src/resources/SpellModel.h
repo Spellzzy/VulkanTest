@@ -9,8 +9,9 @@
 
 #include <vector>
 #include <array>
-#include <unordered_map>
 #include <string>
+
+#include "robin_hood.h"
 
 namespace Spell {
 
@@ -67,7 +68,8 @@ struct Vertex {
 	}
 
 	bool operator==(const Vertex& other) const {
-		return pos == other.pos && color == other.color && texCoord == other.texCoord && materialIndex == other.materialIndex;
+		return pos == other.pos && color == other.color && texCoord == other.texCoord
+			&& normal == other.normal && materialIndex == other.materialIndex;
 	}
 };
 
@@ -76,10 +78,15 @@ struct Vertex {
 namespace std {
 	template<> struct hash<Spell::Vertex> {
 		size_t operator()(Spell::Vertex const& vertex) const {
-			return ((hash<glm::vec3>()(vertex.pos) ^
-				(hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
-				(hash<glm::vec2>()(vertex.texCoord) << 1) ^
-				(hash<int>()(vertex.materialIndex) << 2);
+			size_t seed = 0;
+			auto hashCombine = [&seed](size_t h) {
+				seed ^= h + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			};
+			hashCombine(hash<glm::vec3>()(vertex.pos));
+			hashCombine(hash<glm::vec2>()(vertex.texCoord));
+			hashCombine(hash<glm::vec3>()(vertex.normal));
+			hashCombine(hash<int>()(vertex.materialIndex));
+			return seed;
 		}
 	};
 }
