@@ -5,7 +5,7 @@
 
 namespace Spell {
 
-bool SpellInspector::draw(SpellResourceManager& resources, LightPushConstantData& light, bool& convertYUp, const RenderStats& stats) {
+bool SpellInspector::draw(SpellResourceManager& resources, LightPushConstantData& light, bool& convertYUp, const RenderStats& stats, RenderMode& renderMode) {
 	bool needReload = false;
 
 	ImGui::Begin("Inspector");
@@ -129,6 +129,15 @@ bool SpellInspector::draw(SpellResourceManager& resources, LightPushConstantData
 				"相对于屏幕分辨率过高可能意味着 overdraw 严重");
 	}
 	ImGui::Separator();
+
+	// Display Mode selector
+	{
+		const char* displayModeNames[] = { "Textured", "Flat White", "Wireframe", "Point Cloud" };
+		int currentMode = static_cast<int>(renderMode);
+		if (ImGui::Combo("Display Mode", &currentMode, displayModeNames, IM_ARRAYSIZE(displayModeNames))) {
+			renderMode = static_cast<RenderMode>(currentMode);
+		}
+	}
 
 	ImGui::Checkbox("Convert Y-up to Z-up", &convertYUp);
 	ImGui::Separator();

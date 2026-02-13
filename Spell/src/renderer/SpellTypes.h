@@ -5,6 +5,13 @@
 
 namespace Spell {
 
+enum class RenderMode : int {
+	Textured = 0,    // 带材质纹理 (默认)
+	FlatWhite = 1,   // 白面 (无纹理)
+	Wireframe = 2,   // 线框
+	PointCloud = 3   // 点云
+};
+
 struct UniformBufferObject {
 	alignas(16) glm::mat4 model;
 	alignas(16) glm::mat4 view;

@@ -128,6 +128,7 @@ void SpellApp::createPipelineLayout() {
 }
 
 void SpellApp::createPipeline() {
+	// 1. Textured pipeline (default - full PBR with textures)
 	PipelineConfigInfo pipelineConfig{};
 	SpellPipeline::defaultPipelineConfigInfo(pipelineConfig, device_.msaaSamples());
 	pipelineConfig.renderPass = renderer_.getSwapChainRenderPass();
@@ -135,6 +136,38 @@ void SpellApp::createPipeline() {
 
 	pipeline_ = std::make_unique<SpellPipeline>(
 		device_, "shaders/vert.spv", "shaders/frag.spv", pipelineConfig);
+
+	// 2. Flat White pipeline (no textures, simple Lambert lighting)
+	PipelineConfigInfo flatConfig{};
+	SpellPipeline::defaultPipelineConfigInfo(flatConfig, device_.msaaSamples());
+	flatConfig.renderPass = renderer_.getSwapChainRenderPass();
+	flatConfig.pipelineLayout = pipelineLayout_;
+
+	pipelineFlatWhite_ = std::make_unique<SpellPipeline>(
+		device_, "shaders/vert.spv", "shaders/flat_color_frag.spv", flatConfig);
+
+	// 3. Wireframe pipeline
+	PipelineConfigInfo wireConfig{};
+	SpellPipeline::defaultPipelineConfigInfo(wireConfig, device_.msaaSamples());
+	wireConfig.renderPass = renderer_.getSwapChainRenderPass();
+	wireConfig.pipelineLayout = pipelineLayout_;
+	wireConfig.rasterizationInfo.polygonMode = VK_POLYGON_MODE_LINE;
+	wireConfig.rasterizationInfo.lineWidth = 1.0f;
+	wireConfig.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
+
+	pipelineWireframe_ = std::make_unique<SpellPipeline>(
+		device_, "shaders/vert.spv", "shaders/flat_color_frag.spv", wireConfig);
+
+	// 4. Point Cloud pipeline
+	PipelineConfigInfo pointConfig{};
+	SpellPipeline::defaultPipelineConfigInfo(pointConfig, device_.msaaSamples());
+	pointConfig.renderPass = renderer_.getSwapChainRenderPass();
+	pointConfig.pipelineLayout = pipelineLayout_;
+	pointConfig.rasterizationInfo.polygonMode = VK_POLYGON_MODE_POINT;
+	pointConfig.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
+
+	pipelinePointCloud_ = std::make_unique<SpellPipeline>(
+		device_, "shaders/vert.spv", "shaders/flat_color_frag.spv", pointConfig);
 }
 
 void SpellApp::createUniformBuffers() {
@@ -297,7 +330,13 @@ void SpellApp::renderFrame() {
 	vkCmdPushConstants(commandBuffer, pipelineLayout_, VK_SHADER_STAGE_FRAGMENT_BIT,
 		0, sizeof(LightPushConstantData), &lightData_);
 
-	pipeline_->bind(commandBuffer);
+	switch (renderMode_) {
+	case RenderMode::FlatWhite:  pipelineFlatWhite_->bind(commandBuffer); break;
+	case RenderMode::Wireframe:  pipelineWireframe_->bind(commandBuffer); break;
+	case RenderMode::PointCloud: pipelinePointCloud_->bind(commandBuffer); break;
+	case RenderMode::Textured:
+	default:                     pipeline_->bind(commandBuffer); break;
+	}
 	resources_.model()->bind(commandBuffer);
 
 	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -354,7 +393,7 @@ void SpellApp::renderFrame() {
 }
 
 void SpellApp::drawImGuiPanels() {
-	if (inspector_.draw(resources_, lightData_, convertYUp_, renderStats_)) {
+	if (inspector_.draw(resources_, lightData_, convertYUp_, renderStats_, renderMode_)) {
 		needReload_ = true;
 	}
 }

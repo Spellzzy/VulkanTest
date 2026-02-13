@@ -44,6 +44,9 @@ private:
 	SpellRenderer renderer_{ window_, device_ };
 
 	std::unique_ptr<SpellPipeline> pipeline_;
+	std::unique_ptr<SpellPipeline> pipelineFlatWhite_;
+	std::unique_ptr<SpellPipeline> pipelineWireframe_;
+	std::unique_ptr<SpellPipeline> pipelinePointCloud_;
 	VkPipelineLayout pipelineLayout_;
 	VkDescriptorSetLayout descriptorSetLayout_;
 	VkDescriptorPool descriptorPool_;
@@ -65,6 +68,7 @@ private:
 
 	bool needReload_{ false };
 	bool convertYUp_{ false };
+	RenderMode renderMode_{ RenderMode::Textured };
 	LightPushConstantData lightData_{ glm::vec3(23.47f, 21.31f, 20.79f), glm::vec3(2.0f, 2.0f, 2.0f) };
 	RenderStats renderStats_{};
 };
