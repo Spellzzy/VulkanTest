@@ -224,10 +224,20 @@ void SpellApp::updateUniformBuffer(int frameIndex) {
 	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
 	UniformBufferObject ubo{};
-	ubo.model = glm::rotate(
+	glm::mat4 modelMat = glm::rotate(
 		glm::mat4(1.0f),
 		time * glm::radians(10.0f),
 		glm::vec3(0.0f, 0.0f, 1.0f));
+
+	if (convertYUp_) {
+		glm::mat4 coordFix = glm::rotate(
+			glm::mat4(1.0f),
+			glm::radians(90.0f),
+			glm::vec3(1.0f, 0.0f, 0.0f));
+		modelMat = modelMat * coordFix;
+	}
+
+	ubo.model = modelMat;
 
 	ubo.view = glm::lookAt(
 		glm::vec3(2.0f, 2.0f, 2.0f),
@@ -284,7 +294,7 @@ void SpellApp::renderFrame() {
 }
 
 void SpellApp::drawImGuiPanels() {
-	if (inspector_.draw(resources_, lightData_)) {
+	if (inspector_.draw(resources_, lightData_, convertYUp_)) {
 		needReload_ = true;
 	}
 }
