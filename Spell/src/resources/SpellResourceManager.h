@@ -46,8 +46,8 @@ private:
 
 	SpellDevice& device_;
 
-	std::string modelPath_{ "models/viking_room.obj" };
-	std::string texturePath_{ "textures/viking_room.png" };
+	std::string modelPath_{ "assets/viking_room/viking_room.obj" };
+	std::string texturePath_{ "assets/viking_room/viking_room.png" };
 	std::vector<std::string> availableModels_;
 	std::vector<std::string> availableTextures_;
 

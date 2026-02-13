@@ -6,9 +6,12 @@ x86/
 *.exe
 *.ilk
 *.pdb
-*.obj
 *.log
 *.idb
+
+# Visual Studio 编译中间产物（.obj），但不忽略模型 .obj 文件
+*.obj
+!Spell/assets/**/*.obj
 
 # Visual Studio 临时/缓存文件
 .vs/
@@ -26,14 +29,13 @@ ipch/
 # SPIR-V 编译产物（可从 .vert/.frag 重新编译）
 *.spv
 
-# 纹理资源（体积大，不上传）
+# 旧目录（已迁移至 assets/）
 Spell/textures/
-
-# 模型资源（体积大，不上传）
 Spell/models/
 
-# 材质文件
+# 材质文件（全局忽略，但 assets 下的除外）
 *.mtl
+!Spell/assets/**/*.mtl
 
 # PowerShell 误生成
 $null
