@@ -37,5 +37,15 @@ Spell/models/
 *.mtl
 !Spell/assets/**/*.mtl
 
+# 大型资源文件/压缩包
+DevLibs.zip
+*.fbx
+*.glb
+
+# 测试用模型资源（体积较大）
+Spell/assets/wukong_fbx/
+Spell/assets/wukong_glb/
+Spell/assets/wukong_obj/
+
 # PowerShell 误生成
 $null

@@ -152,10 +152,15 @@
     <ClCompile Include="src\renderer\SpellPipeline.cpp" />
     <ClCompile Include="src\renderer\SpellRenderer.cpp" />
     <ClCompile Include="src\resources\SpellModel.cpp" />
+    <ClCompile Include="src\resources\ObjModelLoader.cpp" />
+    <ClCompile Include="src\resources\GltfModelLoader.cpp" />
+    <ClCompile Include="src\resources\FbxModelLoader.cpp" />
+    <ClCompile Include="src\resources\ModelLoaderFactory.cpp" />
     <ClCompile Include="src\resources\SpellTexture.cpp" />
     <ClCompile Include="src\resources\SpellResourceManager.cpp" />
     <ClCompile Include="src\ui\SpellImGui.cpp" />
     <ClCompile Include="src\ui\SpellInspector.cpp" />
+    <ClCompile Include="$(UFBX_DIR)\ufbx.c" />
     <ClCompile Include="$(IMGUI_DIR)\imgui.cpp" />
     <ClCompile Include="$(IMGUI_DIR)\imgui_demo.cpp" />
     <ClCompile Include="$(IMGUI_DIR)\imgui_draw.cpp" />
@@ -172,6 +177,11 @@
     <ClInclude Include="src\renderer\SpellPipeline.h" />
     <ClInclude Include="src\renderer\SpellRenderer.h" />
     <ClInclude Include="src\resources\SpellModel.h" />
+    <ClInclude Include="src\resources\IModelLoader.h" />
+    <ClInclude Include="src\resources\ObjModelLoader.h" />
+    <ClInclude Include="src\resources\GltfModelLoader.h" />
+    <ClInclude Include="src\resources\FbxModelLoader.h" />
+    <ClInclude Include="src\resources\ModelLoaderFactory.h" />
     <ClInclude Include="src\resources\SpellTexture.h" />
     <ClInclude Include="src\renderer\SpellTypes.h" />
     <ClInclude Include="src\resources\SpellResourceManager.h" />

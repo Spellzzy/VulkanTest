@@ -15,6 +15,8 @@
     <GLM_DIR>$(DEV_LIBS)\glm</GLM_DIR>
     <STB_DIR>$(DEV_LIBS)\stb</STB_DIR>
     <TINYOBJ_DIR>$(DEV_LIBS)\tinyobjloader</TINYOBJ_DIR>
+    <CGLTF_DIR>$(DEV_LIBS)\cgltf</CGLTF_DIR>
+    <UFBX_DIR>$(DEV_LIBS)\ufbx</UFBX_DIR>
     <IMGUI_DIR>$(DEV_LIBS)\imgui</IMGUI_DIR>
   </PropertyGroup>
   
@@ -28,10 +30,13 @@
         $(GLM_DIR);
         $(STB_DIR);
         $(TINYOBJ_DIR);
+        $(CGLTF_DIR);
+        $(UFBX_DIR);
         $(IMGUI_DIR);
         $(IMGUI_DIR)\backends;
         %(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>

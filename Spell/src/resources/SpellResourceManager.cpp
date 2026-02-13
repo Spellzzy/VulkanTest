@@ -1,4 +1,6 @@
 #include "SpellResourceManager.h"
+#include "IModelLoader.h"
+#include "ModelLoaderFactory.h"
 
 #include <stb_image.h>
 #include <algorithm>
@@ -15,100 +17,13 @@ SpellResourceManager::SpellResourceManager(SpellDevice& device)
 }
 
 // ============================================================
-// Lightweight .mtl parser: extract texture paths without loading the full OBJ
-// Only parses the .obj to find 'mtllib' lines, then reads the .mtl for texture names
+// Shared parallel load pipeline: used by both loadInitial and reload
 // ============================================================
-std::vector<MaterialInfo> SpellResourceManager::parseMtlTexturePaths(const std::string& objPath) {
-	std::string mtlBaseDir = std::filesystem::path(objPath).parent_path().string();
-	if (mtlBaseDir.empty()) mtlBaseDir = ".";
-	mtlBaseDir += "/";
-
-	// Step 1: Scan .obj for 'mtllib' references
-	std::vector<std::string> mtlFiles;
-	{
-		std::ifstream objFile(objPath);
-		if (objFile.is_open()) {
-			std::string line;
-			while (std::getline(objFile, line)) {
-				if (line.size() > 7 && line.substr(0, 7) == "mtllib ") {
-					std::string mtlName = line.substr(7);
-					// Trim whitespace
-					while (!mtlName.empty() && (mtlName.back() == '\r' || mtlName.back() == '\n' || mtlName.back() == ' '))
-						mtlName.pop_back();
-					if (!mtlName.empty())
-						mtlFiles.push_back(mtlBaseDir + mtlName);
-				}
-				// Stop scanning after we hit vertex data (optimization)
-				if (!line.empty() && line[0] == 'v' && (line.size() == 1 || line[1] == ' ' || line[1] == 't' || line[1] == 'n'))
-					break;
-			}
-		}
-	}
-
-	// Step 2: Parse each .mtl file for texture names
-	std::vector<MaterialInfo> result;
-	for (const auto& mtlPath : mtlFiles) {
-		std::ifstream mtlFile(mtlPath);
-		if (!mtlFile.is_open()) continue;
-
-		MaterialInfo* current = nullptr;
-		std::string line;
-		while (std::getline(mtlFile, line)) {
-			// Trim trailing whitespace
-			while (!line.empty() && (line.back() == '\r' || line.back() == '\n' || line.back() == ' '))
-				line.pop_back();
-
-			if (line.size() > 7 && line.substr(0, 7) == "newmtl ") {
-				result.push_back({});
-				current = &result.back();
-			} else if (current) {
-				// Helper: extract the last token (filename) from a line, skipping options like -bm 1.0
-				auto extractFilename = [](const std::string& value) -> std::string {
-					// Find the last space-separated token (the actual filename)
-					// This handles cases like "-bm 1.0 normal.png"
-					auto pos = value.rfind(' ');
-					if (pos != std::string::npos && pos + 1 < value.size())
-						return value.substr(pos + 1);
-					return value;
-				};
-
-				// map_Kd = diffuse
-				if (line.size() > 7 && line.substr(0, 7) == "map_Kd ") {
-					current->diffuseTexturePath = mtlBaseDir + extractFilename(line.substr(7));
-				}
-				// map_Bump or map_bump = normal (may have -bm param)
-				else if (line.size() > 9 && (line.substr(0, 9) == "map_Bump " || line.substr(0, 9) == "map_bump ")) {
-					current->normalTexturePath = mtlBaseDir + extractFilename(line.substr(9));
-				}
-				// bump = normal
-				else if (line.size() > 5 && line.substr(0, 5) == "bump ") {
-					current->normalTexturePath = mtlBaseDir + extractFilename(line.substr(5));
-				}
-				// map_Pm = metallic (PBR extension)
-				else if (line.size() > 7 && line.substr(0, 7) == "map_Pm ") {
-					current->metallicTexturePath = mtlBaseDir + extractFilename(line.substr(7));
-				}
-				// map_Pr = roughness (PBR extension)
-				else if (line.size() > 7 && line.substr(0, 7) == "map_Pr ") {
-					current->roughnessTexturePath = mtlBaseDir + extractFilename(line.substr(7));
-				}
-			}
-		}
-	}
-
-	std::cout << "[Spell] Pre-parsed " << result.size() << " material(s) from .mtl for texture paths" << std::endl;
-	return result;
-}
-
-// ============================================================
-// Parallel load: model loading and texture CPU decode run concurrently
-// ============================================================
-
-void SpellResourceManager::loadInitialResources() {
+void SpellResourceManager::loadWithLoader(IModelLoader& loader) {
 	auto totalStart = std::chrono::high_resolution_clock::now();
 
-	// Step 1: Pre-parse .mtl to get texture paths (very fast, ~1-5ms)
-	auto preParsedMaterials = parseMtlTexturePaths(modelPath_);
+	// Step 1: Pre-parse texture paths (fast, format-specific)
+	auto preParsedMaterials = loader.preParseTexturePaths(modelPath_);
 
 	// Step 2: Kick off async texture CPU decode BEFORE model loading
 	auto decodeImage = [](const std::string& path) -> DecodedImageData {
@@ -123,7 +38,6 @@ void SpellResourceManager::loadInitialResources() {
 		return result;
 	};
 
-	// Build task list from pre-parsed materials
 	struct TextureTask {
 		std::string path;
 		bool srgb;
@@ -157,13 +71,13 @@ void SpellResourceManager::loadInitialResources() {
 
 	// Step 3: Load model IN PARALLEL with texture decoding
 	auto modelStart = std::chrono::high_resolution_clock::now();
-	model_ = std::make_unique<SpellModel>(device_, modelPath_);
+	auto loadResult = loader.load(modelPath_);
+	model_ = std::make_unique<SpellModel>(device_, std::move(loadResult));
 	auto modelEnd = std::chrono::high_resolution_clock::now();
 	lastModelLoadTimeMs_ = std::chrono::duration<float, std::milli>(modelEnd - modelStart).count();
 
 	// Step 4: Create fallback textures (fast)
 	auto texStart = std::chrono::high_resolution_clock::now();
-	textures_.clear();
 	createFallbackWhiteTexture();
 
 	// Step 5: Collect decoded results and create GPU resources
@@ -179,7 +93,7 @@ void SpellResourceManager::loadInitialResources() {
 
 	lastTotalLoadTimeMs_ = std::chrono::duration<float, std::milli>(texEnd - totalStart).count();
 
-	// Compute overlap savings: how much decode time was hidden behind model loading
+	// Compute overlap savings
 	float overlapMs = std::min(lastModelLoadTimeMs_, totalDecodeMs);
 	lastDecodeOverlapMs_ = overlapMs;
 
@@ -189,86 +103,26 @@ void SpellResourceManager::loadInitialResources() {
 		<< "ms (parallel overlap saved ~" << lastDecodeOverlapMs_ << "ms)" << std::endl;
 }
 
+// ============================================================
+// Parallel load: model loading and texture CPU decode run concurrently
+// ============================================================
+
+void SpellResourceManager::loadInitialResources() {
+	auto loader = ModelLoaderFactory::createLoader(modelPath_);
+	loadWithLoader(*loader);
+}
+
 void SpellResourceManager::reloadResources() {
 	vkDeviceWaitIdle(device_.device());
 
 	model_.reset();
 	textures_.clear();
 
-	auto totalStart = std::chrono::high_resolution_clock::now();
-
-	// Same parallel strategy as loadInitialResources
-	auto preParsedMaterials = parseMtlTexturePaths(modelPath_);
-
-	auto decodeImage = [](const std::string& path) -> DecodedImageData {
-		DecodedImageData result;
-		result.sourcePath = path;
-		int texChannels;
-		result.pixels = stbi_load(path.c_str(), &result.width, &result.height, &texChannels, STBI_rgb_alpha);
-		if (result.pixels) {
-			result.imageSize = static_cast<VkDeviceSize>(result.width) * result.height * 4;
-			result.valid = true;
-		}
-		return result;
-	};
-
-	struct TextureTask {
-		std::string path;
-		bool srgb;
-		bool hasFile;
-	};
-	std::vector<TextureTask> tasks;
-	std::vector<bool> srgbFlags;
-	std::vector<bool> hasFileFlags;
-
-	for (const auto& mat : preParsedMaterials) {
-		auto addTask = [&](const std::string& path, bool srgb) {
-			bool has = !path.empty() && std::filesystem::exists(path);
-			tasks.push_back({ path, srgb, has });
-			srgbFlags.push_back(srgb);
-			hasFileFlags.push_back(has);
-		};
-		addTask(mat.diffuseTexturePath, true);
-		addTask(mat.normalTexturePath, false);
-		addTask(mat.metallicTexturePath, false);
-		addTask(mat.roughnessTexturePath, false);
-	}
-
-	auto decodeStart = std::chrono::high_resolution_clock::now();
-	std::vector<std::future<DecodedImageData>> futures(tasks.size());
-	for (size_t i = 0; i < tasks.size(); i++) {
-		if (tasks[i].hasFile) {
-			futures[i] = std::async(std::launch::async, decodeImage, tasks[i].path);
-		}
-	}
-
-	auto modelStart = std::chrono::high_resolution_clock::now();
-	model_ = std::make_unique<SpellModel>(device_, modelPath_);
-	auto modelEnd = std::chrono::high_resolution_clock::now();
-	lastModelLoadTimeMs_ = std::chrono::duration<float, std::milli>(modelEnd - modelStart).count();
-
-	auto texStart = std::chrono::high_resolution_clock::now();
-	createFallbackWhiteTexture();
-	loadMaterialTexturesFromDecoded(preParsedMaterials, futures, hasFileFlags, srgbFlags);
-
-	auto decodeEnd = std::chrono::high_resolution_clock::now();
-	float totalDecodeMs = std::chrono::duration<float, std::milli>(decodeEnd - decodeStart).count();
-
-	submitBatchedTextureUpload();
-	auto texEnd = std::chrono::high_resolution_clock::now();
-	lastTextureLoadTimeMs_ = std::chrono::duration<float, std::milli>(texEnd - texStart).count();
-
-	lastTotalLoadTimeMs_ = std::chrono::duration<float, std::milli>(texEnd - totalStart).count();
-
-	float overlapMs = std::min(lastModelLoadTimeMs_, totalDecodeMs);
-	lastDecodeOverlapMs_ = overlapMs;
+	auto loader = ModelLoaderFactory::createLoader(modelPath_);
+	loadWithLoader(*loader);
 
 	std::cout << "[Spell] Reloaded model: " << modelPath_
-		<< ", total textures: " << textures_.size()
-		<< " - Load times - Model: " << lastModelLoadTimeMs_
-		<< "ms, Textures: " << lastTextureLoadTimeMs_
-		<< "ms, Total: " << lastTotalLoadTimeMs_
-		<< "ms (parallel overlap saved ~" << lastDecodeOverlapMs_ << "ms)" << std::endl;
+		<< ", total textures: " << textures_.size() << std::endl;
 }
 
 void SpellResourceManager::createFallbackWhiteTexture() {
@@ -510,11 +364,16 @@ void SpellResourceManager::scanAvailableFiles() {
 	availableModels_.clear();
 	availableTextures_.clear();
 
+	auto supportedExts = ModelLoaderFactory::allSupportedExtensions();
+
 	if (std::filesystem::exists("assets")) {
 		for (const auto& entry : std::filesystem::recursive_directory_iterator("assets")) {
 			if (!entry.is_regular_file()) continue;
-			auto ext = entry.path().extension().string();
-			if (ext == ".obj" || ext == ".OBJ") {
+			std::string ext = entry.path().extension().string();
+			std::string extLower = ext;
+			std::transform(extLower.begin(), extLower.end(), extLower.begin(), ::tolower);
+
+			if (std::find(supportedExts.begin(), supportedExts.end(), extLower) != supportedExts.end()) {
 				availableModels_.push_back(entry.path().generic_string());
 			}
 			if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||

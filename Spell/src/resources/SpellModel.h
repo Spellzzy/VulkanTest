@@ -93,8 +93,11 @@ namespace std {
 
 namespace Spell {
 
+struct ModelLoadResult;
+
 class SpellModel {
 public:
+	SpellModel(SpellDevice& device, ModelLoadResult&& data);
 	SpellModel(SpellDevice& device, const std::string& modelPath);
 	~SpellModel();
 
@@ -109,7 +112,6 @@ public:
 	const std::vector<MaterialInfo>& getMaterials() const { return materials_; }
 
 private:
-	void loadModel(const std::string& filepath);
 	void createVertexBuffer();
 	void createIndexBuffer();
 

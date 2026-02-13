@@ -57,7 +57,7 @@ bool SpellInspector::draw(SpellResourceManager& resources, LightPushConstantData
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Material Count\n\n"
 				"材质数量\n"
-				"模型使用的材质数量（来自 .mtl 文件）\n"
+				"模型使用的材质数量\n"
 				"每个材质可关联多张纹理贴图");
 
 		ImGui::Separator();
@@ -72,7 +72,7 @@ bool SpellInspector::draw(SpellResourceManager& resources, LightPushConstantData
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("Model Load Time\n\n"
 				"模型加载耗时\n"
-				"包括 OBJ 文件解析、顶点去重、\n"
+				"包括模型文件解析、顶点去重、\n"
 				"顶点/索引缓冲区创建和 GPU 上传");
 
 		ImGui::Text("  Textures:  %.1f ms", stats.textureLoadTimeMs);
@@ -180,7 +180,7 @@ bool SpellInspector::draw(SpellResourceManager& resources, LightPushConstantData
 		static_cast<int>(availableTextures.size()));
 	if (hasMaterials) {
 		ImGui::EndDisabled();
-		ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "(model uses .mtl textures)");
+		ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "(model uses embedded textures)");
 	}
 
 	ImGui::Spacing();
@@ -214,7 +214,7 @@ bool SpellInspector::draw(SpellResourceManager& resources, LightPushConstantData
 	// Material texture info
 	if (resources.model() && !resources.model()->getMaterials().empty()) {
 		ImGui::Separator();
-		ImGui::Text("Material Textures (auto-loaded from .mtl):");
+		ImGui::Text("Material Textures (auto-loaded from model):");
 		const auto& mats = resources.model()->getMaterials();
 		for (size_t i = 0; i < mats.size(); i++) {
 			ImGui::Text("  [%zu] diffuse: %s", i,

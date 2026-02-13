@@ -13,6 +13,8 @@ namespace Spell {
 
 static constexpr uint32_t MAX_BINDLESS_TEXTURES = 128;
 
+class IModelLoader;
+
 class SpellResourceManager {
 public:
 	SpellResourceManager(SpellDevice& device);
@@ -48,9 +50,6 @@ public:
 	float lastDecodeOverlapMs() const { return lastDecodeOverlapMs_; }
 
 private:
-	// Pre-parse .mtl file to extract texture paths without loading the full model
-	std::vector<MaterialInfo> parseMtlTexturePaths(const std::string& objPath);
-
 	void createFallbackWhiteTexture();
 	void loadMaterialTextures();
 	// Overload: accepts pre-decoded images from parallel decode
@@ -60,6 +59,9 @@ private:
 		const std::vector<bool>& hasFile,
 		const std::vector<bool>& srgbFlags);
 	void submitBatchedTextureUpload();
+
+	// Internal helper: run parallel load pipeline with a given loader
+	void loadWithLoader(IModelLoader& loader);
 
 	SpellDevice& device_;
 
